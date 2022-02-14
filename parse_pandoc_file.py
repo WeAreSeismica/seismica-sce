@@ -17,9 +17,6 @@ import os, sys
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
     # parsing ORCIDS? If they are included in the word template??
-    # other languages listed for the multiple abstract situation
-        # and in particular dealing with figuring out *which* languages, and their words for 'abstract'
-
     # editor name, dates rec/acc/pub, volume, issue, DOI for the article itself [maybe interactive]
     # fast reports options?
 ####
@@ -158,7 +155,7 @@ while not goto_end:
         if lower_section in special_section_names:
             sname = line.split('{')[1].split('}')[0]
             stype = stype + '*'
-        elif lower_section in skip_sections:
+        elif lower_section in skip_sections:  # skip everything past "References"
             goto_end = True
         else:
             sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])  # strip leading number
