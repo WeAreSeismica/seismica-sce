@@ -13,6 +13,14 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
 
 
 ## general steps for the conversion process
+
+- check a few things before running pandoc:
+    - 2nd and 3rd language abstract headers in the format "Second language abstract: Resumen (Spanish)" 
+    - title is the first line of the document
+    - headers are using header styles
+    - authors and affiliations are done right (one line of all authors, a line for each affiliation right after)
+    - references or bibliography is the last section of the document
+
 - convert .docx article file to latex
     - pandoc file.docx -f docx -t latex --wrap=none -s -o file_pandoc.tex
 
