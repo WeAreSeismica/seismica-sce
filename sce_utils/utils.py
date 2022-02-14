@@ -140,9 +140,8 @@ def get_abstract(ftex_in):
         line = ftex_in.readline()
         if line.startswith('\section'):
             hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
-            print(hdr)
-            abs2_dict['language'] = hdr.split('(')[0].rstrip()
-            abs2_dict['name'] = hdr.split('(')[-1].split(')')[0]
+            abs2_dict['name'] = hdr.split('(')[0].rstrip()
+            abs2_dict['language'] = hdr.split('(')[-1].split(')')[0].lower()
         else:
             if not line.startswith('\hypertarget'):  # until we hit the next section
                 abs2 = abs2 + line.rstrip()
@@ -201,7 +200,8 @@ def parse_parentheticals(line,bibkeys):
                             if test_cite.lower() + 'b' in bibkeys:  # ambiguity
                                 cite_text = '\citet[\\textcolor{red}{a/b ambiguity}]{%s' % test_cite
                             else:
-                                cite_text = '\citet{%s' % test_cite
+                                cite_text = '\citet{%sa' % test_cite
+                                to_write = ' '.join(to_write.split(' ')[:-4]) + ' '
                     else:  # not an et al, 1-2 authors
                         test_cite = ''.join([prev,cite_pieces[0][:4]])
                         if test_cite.lower() + 'a' not in bibkeys:  # try moving back farther
@@ -213,7 +213,8 @@ def parse_parentheticals(line,bibkeys):
                                 if test_cite.lower() + 'b' in bibkeys:  # ambiguity
                                     cite_text = '\citet[\\textcolor{red}{a/b ambiguity}]{%s' % test_cite
                                 else:
-                                    cite_text = '\citet{%s' % test_cite
+                                    cite_text = '\citet{%sa' % test_cite
+                                    to_write = ' '.join(to_write.split(' ')[:-4]) + ' '
                     break
                 et_ind = [e == 'et' for e in cite_pieces]  # look for et al
                 if sum(et_ind) > 0:  # if there is an et al, deal with it
