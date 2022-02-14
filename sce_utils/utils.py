@@ -134,15 +134,20 @@ def get_abstract(ftex_in):
     after finding second- or third-language abstract header, read and parse that abstract
     return abstract text and dict with abstract info (language, heading)
     """
-    line = ftex_in.readline()  # TODO: parse section header to get the other language
-    abs2_dict = {'language':'french','name':'Résume'}
+    abs2_dict = {}
     abs2 = ''
     while True:
         line = ftex_in.readline()
-        if not line.startswith('\hypertarget'):  # until we hit the next section
-            abs2 = abs2 + line.rstrip()
+        if line.startswith('\section'):
+            hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
+            print(hdr)
+            abs2_dict['language'] = hdr.split('(')[0].rstrip()
+            abs2_dict['name'] = hdr.split('(')[-1].split(')')[0]
         else:
-            break 
+            if not line.startswith('\hypertarget'):  # until we hit the next section
+                abs2 = abs2 + line.rstrip()
+            else:
+                break 
 
     return ftex_in, line, abs2, abs2_dict
 
