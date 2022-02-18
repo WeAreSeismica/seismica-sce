@@ -154,10 +154,7 @@ def parse_parentheticals(line,bibkeys):
     """
     for a line of text, parse parentheticals for citations and replace with appropriate \cite calls
     """
-    # this is a stupidly complicated function. Would be nice to simplify it if possible (TODO)
-    # TODO for real: preamble parsing for citations (like e.g.)
-    # TODO: multiple years for the same authors (ie case where we have YYYY, YYYY)
-    to_write = ''  # append pieces as you check them
+    to_write = ''  # for appending pieces of text as they're checked
     if '(' in line:  # check for parentheticals
         # find indices of open/close parens
         open_par = [pos for pos, char in enumerate(line) if char == '(']
@@ -167,99 +164,285 @@ def parse_parentheticals(line,bibkeys):
             print(line)
             sys.exit()
 
-        for k in range(len(open_par)):  # loop parentheticals, see if they look like citations
-            if k == 0:  # add text before this parenthetical to the output string
-                to_write += line[:open_par[k]]
-            else:
-                to_write += line[clse_par[k-1]+1:open_par[k]]
-            if to_write[-1] == '\\':  # check if this paren is actually a math paren
-                to_write += line[open_par[k]:clse_par[k]+1]
-                break
-            paren = line[open_par[k]+1:clse_par[k]]  # text within parens
-            # signs of citation: contains et al., starts with e.g., match to bibkey
-            # try to skip preambles, find first year
-            paren = paren.split(' ')
+    else:  # no parentheticals in this line of text:
+        return line
 
-            cite_text = '\citep{'
+    # if there are parentheticals, move on to process them
+    for k in range(len(open_par)):
+        # separate out the parenthetical and the text between this and the previous parenthetical
+        paren = line[open_par[k]+1:clse_par[k]]
+        if k == 0:
+            pretext = line[:open_par[k]]
+        else:
+            pretext = line[clse_par[k-1]+1:open_par[k]]  # the last bit of text before this parenthetical
 
-            yr_inds = np.where([e[:4].isdigit() for e in paren])[0] + 1
-            yr_inds = np.append(0,yr_inds)
-            for l in range(len(yr_inds)-1):
-                # combine each set of pieces into a string, try to find in bib keys
-                cite_pieces = paren[yr_inds[l]:yr_inds[l+1]]
-                cite_pieces = [word.translate({ord(k): None for k in ['.',',','&','\\',';']}) \
-                                for word in cite_pieces]  # remove punctuation
-                if len(cite_pieces) == 1 and cite_pieces[0][:4].isdigit():  # just a year -> citet
-                    prev = to_write.split(' ')[-2]
-                    if prev.startswith('al'):  # this was an et al!
-                        prevprev = to_write.split(' ')[-4]
-                        test_cite = ''.join([prevprev,'EA',cite_pieces[0][:4]])
-                        if test_cite.lower() + 'a' not in bibkeys:  # sus
-                            cite_text = '\\textcolor{red}{bad ref skipped: %s}' % test_cite
-                        else:
-                            if test_cite.lower() + 'b' in bibkeys:  # ambiguity
-                                cite_text = '\citet[\\textcolor{red}{a/b ambiguity}]{%s' % test_cite
-                            else:
-                                cite_text = '\citet{%sa' % test_cite
-                                to_write = ' '.join(to_write.split(' ')[:-4]) + ' '
-                    else:  # not an et al, 1-2 authors
-                        test_cite = ''.join([prev,cite_pieces[0][:4]])
-                        if test_cite.lower() + 'a' not in bibkeys:  # try moving back farther
-                            prevprev = to_write.split(' ')[-4]  # skip expected 'and'
-                            test_cite = ''.join([prevprev,prev,cite_pieces[0][:4]])
-                            if test_cite.lower() + 'a' not in bibkeys:  # sus
-                                cite_text = '\\textcolor{red}{bad ref skipped: %s}' % test_cite
-                            else:
-                                if test_cite.lower() + 'b' in bibkeys:  # ambiguity
-                                    cite_text = '\citet[\\textcolor{red}{a/b ambiguity}]{%s' % test_cite
-                                else:
-                                    cite_text = '\citet{%sa' % test_cite
-                                    to_write = ' '.join(to_write.split(' ')[:-4]) + ' '
-                    break
-                et_ind = [e == 'et' for e in cite_pieces]  # look for et al
-                if sum(et_ind) > 0:  # if there is an et al, deal with it
-                    et_ind = np.where(et_ind)[0][0]
-                    cite_pieces[et_ind] = 'E'  # replace the et al with EA
-                    cite_pieces[et_ind+1] = 'A'
-                and_ind = [e == 'and' for e in cite_pieces]  # look for 'and'
-                if sum(and_ind) > 0:
-                    and_ind = np.where(and_ind)[0][0]
-                    cite_pieces = np.delete(cite_pieces, and_ind)
-                test_cite = ''.join(cite_pieces)
-                # check if this citation matches any of the keys in the bibliography
-                if test_cite.lower() + 'a' not in bibkeys:
-                    # possibly a preamble? try skipping a character at a time until it matches
-                    for m in range(5,len(test_cite)):
-                        if test_cite[-m:].lower() + 'a' in bibkeys:
-                            preamble = tt.escape_latex(test_cite[:-m])
-                            test_cite = test_cite[-m:]
-                            cite_text = '\\textcolor{red}{'+preamble+ '}' + cite_text
-                            if l == 0:
-                                cite_text = cite_text + test_cite + 'a' # first citation
-                            else:
-                                cite_text = cite_text + ', ' + test_cite + 'a'
-                            break
-                    else:
-                        cite_text = '\\textcolor{red}{bad ref skipped}' + cite_text
+        # check if this is inline math
+        if pretext[-1] == '\\':
+            to_write += pretext
+            to_write += line[open_par[k]:clse_par[k]+1]  # TODO: does this preserve the \( and \) ??
+            break
 
-                else:  # 'a' *was* in the keylist
-                    if test_cite.lower() + 'b' in bibkeys:
-                        cite_text = 'ref year ambiguity ' + cite_text
-                    if l == 0:
-                        cite_text = cite_text + test_cite + 'a' # first citation
-                    else:
-                        cite_text = cite_text + ', ' + test_cite + 'a'
-            cite_text = cite_text + '}'
+        # if not math, continue to parse:
+        parsed, pretext = _parse_paren(paren,pretext,bibkeys)
 
-            if cite_text.endswith('\citep{}'):  # parenthetical didn't match anything, keep it
-                to_write += '(' 
-                to_write += ' '.join(paren) 
-                to_write += ')'
-            else:
-                to_write += cite_text
+        # add the parsed stuff (pre-paren text may be altered for (YYYY) citations)
+        to_write += pretext
+        to_write += parsed
 
         if k == len(open_par) - 1:
             to_write += line[clse_par[-1]+1:]
-    else:  # no parentheticals at all!
-        to_write = line
+
     return to_write
+
+
+def _parse_paren(paren, pretext, bibkeys):
+    """
+    parse whatever's in one set of parens
+    """
+
+    is_preamble = False  # non-citation text in the parenthetical before the first citation
+    is_badref = False    # unparseable for some unknown reason
+    is_abamb = False     # more than one paper by this author set for this year; resolve manually
+    citations = []       # to hold list of bibkeys
+    badtext = ''         # for text if only *some* refs are bad
+
+    # split up the parenthetical by spaces -> this will have all punctuation preserved
+    paren = paren.split(' ')
+
+    # find years
+    yr_inds = np.where([e[:4].isdigit() for e in paren])[0]
+
+    # CASE: if all the contents are years, figure out citation from pre-paren text
+    if len(yr_inds) == len(paren):
+        # focus on the first year, then deal with any others
+        prev = pretext.split(' ')[-2]
+        if prev.startswith('al'):  # Alpha et al. (YYYY)
+            prevprev = pretext.split(' ')[-4]
+            test_cite = ''.join([prevprev,'EA',paren[0][:4]])
+
+            is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+            if not is_badref and not is_abamb:
+                citations.append(test_cite + 'a')
+                pretext = ' '.join(pretext.split(' ')[:-4]) + ' ' # remove authors from line
+
+        else:  # Alpha (YYYY) or Alpha and Beta (YYYY)
+            test_cite = ''.join([prev,paren[0][:4]])  # try just one name first
+            is_badref,is_abamb = _test_test_cite(test_cite, bibkeys)
+            if is_badref:
+                prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
+                test_cite = ''.join([prevprev,prev,paren[0][:4]])
+                is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                if not is_badref and not is_abamb:
+                    citations.append(test_cite + 'a')
+                    pretext = ' '.join(pretext.split(' ')[:-4]) + ' '
+
+        # if we couldn't parse this thing, return something to write to mark it
+        if is_badref:
+            parsed = '\\textcolor{red}{bad ref skipped: %s}' % ' '.join(paren)
+            return parsed, pretext
+        if is_abamb:
+            parsed = '\\textcolor{red}{a/b ambiguity: %s}' % ' '.join(paren)
+            return parsed, pretext
+
+        if len(yr_inds) > 1:  # ie more than one year, same authors - Alpha et al. (2010, 2011)
+            for i in range(1,len(yr_inds)):
+                initial_cite = test_cite[:-4]
+                test_cite = ''.join([initial_cite,paren[i][:4]])
+                is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                if is_badref:
+                    parsed = '\\textcolor{red}{bad ref skipped: %s}' % ' '.join(paren) 
+                    return parsed, pretext
+                if is_abamb:
+                    parsed = '\\textcolor{red}{a/b ambiguity: %s}' % ' '.join(paren)
+                    return parsed, pretext 
+                if not is_badref and not is_abamb:
+                    citations.append(test_cite + 'a')
+
+        # having read through all possible years in this year-only parenthetical, 
+        # compile citation and return
+        parsed = '\citet{'
+        parsed += ', '.join(citations)  # add on citations and separators
+        parsed += '}'  # remove trailing comma and space, close the bracket
+
+        return parsed, pretext
+
+    # CASE: not only years, so all citation info should be within the parens
+    yr_inds = yr_inds + 1   # for easier looping/selecting the text bits
+    yr_inds = np.append(0, yr_inds)
+
+    # loop those year-index places
+    for l in range(len(yr_inds) - 1):
+        # choose bits corresponding to one particular year index
+        bits = paren[yr_inds[l]:yr_inds[l+1]]
+        # remove punctuation from these text pieces
+        bits = [word.translate({ord(k): None for k in ['.',',','&','\\',';']}) \
+                for word in bits]
+
+        # check if this piece of the parenthetical is just a year (Alpha, 2010; 2011)
+        if len(bits) == 1 and bits[0][:4].isdigit():
+            # if we have a citation in the list already, try using that one
+            if len(citations) == 0:  # nothing to work with here, not sure why
+                badtext += 'bad ref: %s ' % bits[0]
+            else:
+                test_cite = citations[-1][:-5] + bits[0][:4]  # new citation to test
+                is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                if is_badref:
+                    badtext += 'bad ref: %s ' % test_cite
+                if is_abamb:
+                    badtext += 'a/b: %s' % test_cite
+                if not is_badref and not is_abamb:
+                    citations.append(test_cite+'a')
+
+        else:  # set of bits has more than just a year
+            # replace et al. with EA, remove 'and' if present
+            bits = _etal_and(bits)
+
+            # make a test citation and see if it works
+            test_cite = ''.join(bits)
+            is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+            if is_abamb:
+                badtext += 'a/b: %s ' % test_cite
+            if is_badref and l == 0:
+                for j in range(yr_inds[l]+1,yr_inds[l+1]):
+                    bits = paren[j:yr_inds[l+1]]  # scrape off first word and try again
+                    bits = [word.translate({ord(k): None for k in ['.',',','&','\\',';']}) \
+                            for word in bits]
+                    bits = _etal_and(bits)
+                    test_cite = ''.join(bits)
+                    is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                    if not is_badref and is_abamb:
+                        badtext += 'a/b AND preamble: %s ' % test_cite
+                        break
+                    if not is_badref and not is_abamb:
+                        is_preamble = True
+                        preamble_text = escape_latex(' '.join(paren[:j]))
+                        break
+                if is_badref: # we couldn't parse this one, even with scraping
+                    bits = paren[yr_inds[l]:yr_inds[l+1]]
+                    badtext += 'bad ref: %s' % ' '.join(bits)
+            if is_badref and l != 0:  # can't read reference and it's not the first citation here
+                badtext += 'bad ref: %s' % test_cite
+            if not is_badref and not is_abamb:  # we parsed it! yay!
+                citations.append(test_cite+'a')
+
+    # combine citations into \citep, including preamble if there is one
+    if len(citations) == 0:  # we failed to parse anything here :(
+        parsed = '\\textcolor{red}{NOTE %s}' % badtext
+    else:
+        if is_preamble:
+            parsed = '\citep[%s][]{' % preamble_text
+        else:
+            parsed = '\citep{'
+        parsed += ', '.join(citations)
+        parsed += '}'
+
+        if len(badtext) != 0:
+            parsed += ' \\textcolor{red}{NOTE %s}' % badtext
+
+    return parsed, pretext
+
+
+def _test_test_cite(test_cite,bibkeys):
+    """
+    take a citation tag and test it against bibkeys; return if no match or if a/b ambiguous
+    """
+    is_badref = False
+    is_abamb = False
+
+    if test_cite.lower() + 'a' not in bibkeys:
+        is_badref = True
+    else:
+        if test_cite.lower() + 'b' in bibkeys:
+            is_abamb = True
+
+    return is_badref, is_abamb
+
+
+def _etal_and(bits):
+    """
+    replace 'et al' with EA; remove 'and' from list of pieces
+    """
+    et_ind = [e == 'et' for e in bits]
+    if sum(et_ind) > 0:
+        et_ind = np.where(et_ind)[0][0]
+        bits[et_ind] = 'E'
+        bits[et_ind+1] = 'A'
+    and_ind = [e == 'and' for e in bits]
+    if sum(and_ind) > 0:
+        and_ind = np.where(and_ind)[0][0]
+        bits = np.delete(bits,and_ind)
+    return bits
+
+########################################################################
+# tex escaping for python
+########################################################################
+
+_latex_special_chars = {
+    '&': r'\&',
+    '%': r'\%',
+    '$': r'\$',
+    '#': r'\#',
+    '_': r'\_',
+    '{': r'\{',
+    '}': r'\}',
+    '~': r'\textasciitilde{}',
+    '^': r'\^{}',
+    '\\': r'\textbackslash{}',
+    '\n': '\\newline%\n',
+    '-': r'{-}',
+    '\xA0': '~',  # Non-breaking space
+    '[': r'{[}',
+    ']': r'{]}',
+}
+
+class NoEscape(str):
+    """
+    A simple string class that is not escaped.
+    When a `.NoEscape` string is added to another `.NoEscape` string it will
+    produce a `.NoEscape` string. If it is added to normal string it will
+    produce a normal string.
+    Args
+    ----
+    string: str
+        The content of the `NoEscape` string.
+    """
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self)
+
+    def __add__(self, right):
+        s = super().__add__(right)
+        if isinstance(right, NoEscape):
+            return NoEscape(s)
+        return s
+
+def escape_latex(s):
+    r"""Escape characters that are special in latex.
+    Args
+    ----
+    s : `str`, `NoEscape` or anything that can be converted to string
+        The string to be escaped. If this is not a string, it will be converted
+        to a string using `str`. If it is a `NoEscape` string, it will pass
+        through unchanged.
+    Returns
+    -------
+    NoEscape
+        The string, with special characters in latex escaped.
+    Examples
+    --------
+    >>> escape_latex("Total cost: $30,000")
+    'Total cost: \$30,000'
+    >>> escape_latex("Issue #5 occurs in 30% of all cases")
+    'Issue \#5 occurs in 30\% of all cases'
+    >>> print(escape_latex("Total cost: $30,000"))
+    References
+    ----------
+        * http://tex.stackexchange.com/a/34586/43228
+        * http://stackoverflow.com/a/16264094/2570866
+    """
+
+    if isinstance(s, NoEscape):
+        return s
+
+    return NoEscape(''.join(_latex_special_chars.get(c, c) for c in str(s)))
+
