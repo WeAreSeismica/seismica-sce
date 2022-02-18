@@ -327,7 +327,7 @@ def _parse_paren(paren, pretext, bibkeys):
 
     # combine citations into \citep, including preamble if there is one
     if len(citations) == 0:  # we failed to parse anything here :(
-        parsed = '\\textcolor{red}{NOTE %s}' % badtext
+        parsed = '(' + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
     else:
         if is_preamble:
             parsed = '\citep[%s][]{' % preamble_text
