@@ -14,7 +14,7 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
 
 ## general steps for the conversion process
 
-- check a few things before running pandoc:
+- check a few things in the .docx file before running pandoc:
     - 2nd and 3rd language abstract headers in the format "Second language abstract: Resumen (Spanish)" 
     - title is the first line of the document
     - headers are using header styles
@@ -40,7 +40,7 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
     - (set the input filenames manually in the script)
     - parse_pandoc_file.py -> file_init.tex
 
-- run bibtex and pdflatex, look at the output and figure out what needs fixing
+- run bibtex and lualatex, look at the output and figure out what needs fixing
     - lualatex file_init.tex -> file_init.pdf
     - bibtex file_init.aux
     - lualatex ''
@@ -49,7 +49,7 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
 
 - manually link figure files at the right sizes, adjust placement of automated \includegraphics as needed
     - pandoc does not extract image files from word so they will need to be uploaded separately
-- manually adjust for extra bits of inline citations (in red), in line citations for multiple papers by the same authors (hopefully in red), and year-only citations (in red)
+- manually adjust for any citations that we couldn't parse (should be in red)
 - add extra hyphenation rules for words latex doesn't know if columns are overfull
 - manually add some header metadata eg. volume, doi, editor, dates
 - look at junk file and manually reformat/place tables in text where they belong (because I do not understand longtable)
@@ -58,7 +58,6 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
 ## TODO: 
 - make sure catch for supplemental figures/tables works for in-text references
 - figure out longtable/table parsing?
-- parse extra bits of citations, like 'e.g.,' wherever possible
 - more user-friendly startup (ie input filenames, rather than editing scripts)
     - related: complete workflow that runs all scripts in sequence automatically
     - and maybe make this all install as a package?
