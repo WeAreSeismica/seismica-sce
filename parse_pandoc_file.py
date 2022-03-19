@@ -5,22 +5,25 @@ import numpy as np
 import os, sys
 
 
-####
-# run through a pandoc'd latex file line by line, correcting things it doesn't catch well
+########################################################################
+# run through a pandoc'd latex file line by line, correcting things pandoc doesn't catch well
 # in particular inline citations (so also read corresponding bibtex first)
 # NOTE: this script assumes:
     # the input file used the seismica docx template, and used it *properly* (esp. headers/styles)
     # equations were typeset using word's native equation thing
     # there are no more than 99 equations, figures, and tables, respectively, in the document
-    # a bibtex file using the reference list has already been created
+    # a bibtex file using the reference list has already been created (see: anystyle, fix_bibtex.py)
     # references/bibliography is the LAST SECTION of the document, nothing after it will be kept
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
     # parsing ORCIDS? If they are included in the word template??
     # editor name, dates rec/acc/pub, volume, issue, DOI for the article itself [maybe interactive]
+        # OR at least print some message reminding people to change them
+        # (there will have to be a checklist for a bunch of this stuff)
     # fast reports options?
-####
+########################################################################
 
+########################################################################
 # set filenames and review status  TODO: set these filenames to get started
 bibtex = 'test_init.bib'
 tex_in = 'test_pandoc.tex'
@@ -30,7 +33,7 @@ junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed 
 review = False  # switch for line numbers (and single-column format)
 
 ########################################################################
-# setup:
+# set up files etc:
 # read bibtex, get list of keys for entries that we expect to find in the text
 parser = bbl.Parser()
 biblio = parser.parse(open(bibtex,'r'))
@@ -64,12 +67,12 @@ while True:
 # get the title text
 article_title = line.rstrip()
 
-# read in author info (names, affiliations, email for corresponding if applicable
+# read in author info (names, affiliations, email for corresponding if applicable)
 while True:  # read up to where authors start
     line = ftex_in.readline()
     if line != '\n':
         break  # author names, prior to affiliations
-authors = {}
+authors = {}  # read author names and superscripts for affiliations
 for i,bit in enumerate(line.split('}')[:-1]):
     bit2 = bit.split('\\textsuperscript{')
     if bit2[0].startswith(','):
@@ -83,7 +86,7 @@ for i,bit in enumerate(line.split('}')[:-1]):
     sp = bit2[1]
     authors[i] = {'name':nm,'supers':sp}
 
-affils = {}
+affils = {}  # read affiliations that go with those superscripts
 while True:
     line = ftex_in.readline()
     if line.startswith('\\textsuperscript'):  # an affiliation
@@ -99,14 +102,13 @@ while True:
     elif line.startswith('\hypertarget') or line.startswith('\section'):  # hopefully not \section
         break  # stop at the first abstract
 
-
-# read some more lines, look for abstract heading
+# read up to abstract heading
 while True:
     line = ftex_in.readline()
     if line.startswith('\section{Abstract}'):
         break
 
-# read lines cautiously, find the actual abstract text
+# read lines cautiously, find the (first/English-language) abstract text
 abst = ""
 while True:
     line = ftex_in.readline()
@@ -119,8 +121,8 @@ other_langs = []
 abs2 = None; abs2_dict = {}
 # deal with the second-language abstract  if there is one
 if line.startswith('\hypertarget{second-language-abstract'):
-    ftex_in, line, abs2, abs2_dict = ut.get_abstract(ftex_in)
-    other_langs.append(abs2_dict['language'])
+    ftex_in, line, abs2, abs2_dict = ut.get_abstract(ftex_in) # this function reads up to the
+    other_langs.append(abs2_dict['language'])                 # next \hypertarget
 
 abs3 = None; abs3_dict = {}
 # deal with the third-language abstract  if there is one
@@ -132,21 +134,22 @@ if line.startswith('\hypertarget{third-language-abstract'):
 ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,review=review,\
             other_langs=other_langs)
 
+# add abstract(s) after header
 ftex_out = tt.add_abstract(ftex_out,abst,abs2=abs2,abs2_dict=abs2_dict,\
-                            abs3=abs3,abs3_dict=abs3_dict)  # add abstracts after header in output file
+                            abs3=abs3,abs3_dict=abs3_dict)
 
 ########################################################################
 # go through the rest of the sections! and deal with citations, figures, and equations
 
-goto_end = False
-first_line = True  # abstract reading stopped at a section, so don't skip that
+goto_end = False   # flag to stop reading/writing at references section
+first_line = True  # abstract reading stopped at a section header, so don't read past that
 while not goto_end:
-    if not first_line:  # for when we already read the first hypertarget to get to the end of the abs.
+    if not first_line:  # for when we already read the \hypertarget to get to the end of the abs.
         line = ftex_in.readline()
     else:
         first_line = False
     if line.startswith('\end{document}'): # this is the end, stop reading
-        break
+        break  # shouldn't hit this unless there is no reference section
 
     if line.startswith('\hypertarget'):  # the next line will be a section heading
         lower_section = line.split('{')[1].split('}')[0]
