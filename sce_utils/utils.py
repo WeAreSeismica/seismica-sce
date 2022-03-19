@@ -106,7 +106,7 @@ def check_for_fig_tab_eqn_refs(to_write):
                         fig_num = 999
                     else:
                         try:
-                            shift = len(word)+ + 2
+                            shift = len(word) + 2
                             fig_num = int(to_write[ifig+shift])  # maybe the number was in parens?
                         except ValueError:
                             fig_num = 999
