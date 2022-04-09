@@ -1,6 +1,6 @@
 import os, sys
 
-def set_up_header(fout,title,authors={},affils={},\
+def set_up_header(fout,title,authors={},affils={},credits={},\
                   dates={'rec':'January 1, 1900','acc':'February 29, 1900','pub':'April 1, 1900'},\
                   edname='A. Editor',doi='10.100',volume=0,issue=None,\
                   review=True,onecol=False,fast=False,anon=False,\
@@ -46,10 +46,16 @@ def set_up_header(fout,title,authors={},affils={},\
             towrite += '\n\\thanks{Corresponding author: '+auth['corresp']+'}'
         towrite += '}\n'
         fout.write(towrite)
+    fout.write('\n')
 
     for k in affils.keys():
         aff = affils[k]
         fout.write('\\affil['+aff['super']+']{'+aff['place']+'}\n')
+    fout.write('\n')
+
+    for k in credits.keys():
+        fout.write('\credit{'+k+'}{'+credits[k]+'}\n')
+    fout.write('\n')
 
     if len(other_langs) > 0:
         header2 = '\\setotherlanguages{'
@@ -58,46 +64,30 @@ def set_up_header(fout,title,authors={},affils={},\
         header2 = header2[:-1]
         header2 += '}'
         fout.write(header2)
+        fout.write('\n')
 
     fout.write('\\begin{document}')
 
     return fout
 
-def add_abstract(fout,abs1,abs2=None,abs2_dict={},abs3=None,abs3_dict={}):
+def add_abstracts(fout,summaries):
     """
-    write abstract(s) into file after header
+    write abstract(s) and optional non-technical summary into file after header
     """
     towrite = """
-\makeseistitle
-{
-\\begin{summary}{Abstract}"""+abs1+"""
-\end{summary}
-}
-"""
-    fout.write(towrite)
+\makeseistitle{\n"""
+    for k in summaries.keys():
+        abst = summaries[k]
+        toadd = ''
+        if abst['language'] != 'English':
+            toadd += "\\begin{%s}\n" % abst['language']
+        toadd += "\\begin{summary}{%s}\n" % abst['name']
+        toadd += "%s\n\end{summary}\n" % abst['text']
+        if abst['language'] != 'English':
+            toadd += "\end{%s}\n" % abst['language']
+        towrite += toadd
 
-    if abs2 is not None:
-        towrite = """{
-\\begin{"""+abs2_dict['language']+"""}
-\\begin{summary}{"""+abs2_dict['name']+"""}"""+abs2+"""
-\end{summary}
-\end{"""+abs2_dict['language']+"""}
-}
-"""
-    else:
-        towrite = '{}'
-    fout.write(towrite)
-
-    if abs3 is not None:
-        towrite = """{
-\\begin{"""+abs3_dict['language']+"""}
-\\begin{summary}{"""+abs3_dict['name']+"""}"""+abs3+"""
-\end{summary}
-\end{"""+abs3_dict['language']+"""}
-}
-"""
-    else:
-        towrite = '{}'
+    towrite += "}\n"
     fout.write(towrite)
 
     return fout
