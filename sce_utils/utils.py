@@ -6,6 +6,42 @@ import os, sys
 # functions for text processing of pandoc outputs
 ####
 
+def document_structure(ftex_in):
+    """
+    read through entire pandoc'd file and extract outline, with line numbers for
+    where each section heading is
+    this prepares us to get article metadata (author orcids, credit) with fewer assumptions
+    about how those sections are ordered (still need authors and title first, though)
+    and if we want it could let us check that all necessary sections are in fact present?
+    """
+    struct = {}
+    ftex_in.seek(0)
+    nln = sum(1 for line in ftex_in)
+    ftex_in.seek(0)
+    i = 0  # line counter
+    j = 0  # section heading counter
+    while i < nln:
+        line = ftex_in.readline()
+        if line.startswith('\hypertarget'):  # next line will be section heading
+            i += 1
+            line = ftex_in.readline()  # this will be the heading
+            if line.split('{')[1][0].isdigit():
+                sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])
+            else:
+                sname = line.split('{')[1].split('}')[0]
+            sect = {'sname': sname,\
+                    'level': line.split('{')[0][1:],\
+                    'line':i}
+            struct[j] = sect
+            j += 1
+        elif line.startswith('\\begin{document}'):
+            sect = {'sname':'begin_doc',\
+                    'level': 0,\
+                    'line': i}
+            struct['b'] = sect
+        i += 1
+    return ftex_in, struct
+
 def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
     """
     read and deal with an environment (equation, figure, table)
@@ -147,8 +183,9 @@ def get_abstract(ftex_in):
                 abs2 = abs2 + line.rstrip()
             else:
                 break 
+        abs2_dict['text'] = abs2
 
-    return ftex_in, line, abs2, abs2_dict
+    return ftex_in, line, abs2_dict
 
 def parse_parentheticals(line,bibkeys):
     """
