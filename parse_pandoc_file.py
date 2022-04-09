@@ -9,18 +9,19 @@ import os, sys
 # run through a pandoc'd latex file line by line, correcting things pandoc doesn't catch well
 # in particular inline citations (so also read corresponding bibtex first)
 # NOTE: this script assumes:
-    # the input file used the seismica docx template, and used it *properly* (esp. headers/styles)
-    # equations were typeset using word's native equation thing
+    # the input file used the seismica docx/odt template, and used it *properly* (esp. headers/styles)
+    # equations were typeset using native equation thing
     # there are no more than 99 equations, figures, and tables, respectively, in the document
     # a bibtex file using the reference list has already been created (see: anystyle, fix_bibtex.py)
     # references/bibliography is the LAST SECTION of the document, nothing after it will be kept
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
-    # parsing ORCIDS? If they are included in the word template??
+    # command line args, better workflow in general
+    # finding ORCID and CRediT sections if not automatically ID'd
     # editor name, dates rec/acc/pub, volume, issue, DOI for the article itself [maybe interactive]
         # OR at least print some message reminding people to change them
         # (there will have to be a checklist for a bunch of this stuff)
-    # fast reports options?
+    # fast reports options? review/anonymous options?
 ########################################################################
 
 ########################################################################
@@ -48,24 +49,41 @@ fjunk = open(junk_out,'w')
 nfig = 1; nequ = 1; ntab = 1
 figcap = {}; tabcap = {}
 
-special_section_names = ['acknowledgements','acknowledgments','data-availability','author-contributions']  # for sections that aren't numbered, lowercase and with spaces as -
+# for sections that aren't numbered, lowercase and with spaces as -
+special_section_names = ['acknowledgements','acknowledgments',\
+                        'data-availability','data-and-code-availability']
 skip_sections = ['references','bibliography']  # when we get to this header, skip to the end
 
 ########################################################################
-# start at the beginning, deal with title, authors, and abstracts
+# start by scraping overall structure
+# and figuring out where the document itself starts
+_,struct = ut.document_structure(ftex_in)
+
+# determine which sections are ORCIDs and CRediT
+orcid_key = -1; credit_key = -1; abs1_key = -1
+for k in struct.keys():
+    if struct[k]['sname'].lower().__contains__('orcid'):
+        orcid_key = k
+    if struct[k]['sname'].lower().__contains__('author contributions'):
+        credit_key = k
+    if struct[k]['sname'].lower() == 'abstract':  # specifically, the English-language one
+        abs1_key = k
+
+assert orcid_key >= 0, 'Author ORCIDs section not found'
+assert credit_key >= 0, 'Author contributions section not found'
+assert abs1_key >= 0, 'Abstract not found'
+
+# deal with title and authors
 # skip header stuff from pandoc that seismica.cls will replace, find manuscript title
-while True:
-    line = ftex_in.readline()
-    if line.startswith('\\begin{document}'):
-        break
+ftex_in.seek(0)
+for i in range(struct['b']['line']+1):
+    line = ftex_in.readline()  # should read exactly to \begin{document}
 
 while True:
     line = ftex_in.readline()
     if line != '\n':
         break  # this should be the title, fingers crossed
-
-# get the title text
-article_title = line.rstrip()
+article_title = line.rstrip() # get the title text
 
 # read in author info (names, affiliations, email for corresponding if applicable)
 while True:  # read up to where authors start
@@ -93,50 +111,110 @@ while True:
         bits = line.split('}')
         sp = bits[0].split('{')[1]
         pl = bits[1].rstrip()
-        affils[int(sp)] = {'super':sp,'place':pl}
+        try:
+            affils[int(sp)] = {'super':sp,'place':pl}
+        except ValueError:  # probably a superscript asterisk
+            if sp == '*':
+                email = line.split(':')[-1].lstrip()
+                for k in authors.keys():
+                    if '*' in authors[k]['supers']:
+                        authors[k]['corresp'] = email.rstrip()
+            else:  # maybe some other symbol eg for changing affiliation
+                print('unknown afflitiation superscript; moving to junk')
+                fjunk.write(line)
+                fjunk.write('\n')
     elif line.startswith('*'):  # corresponding author email address
         email = line.split(':')[-1].lstrip()
         for k in authors.keys():
             if '*' in authors[k]['supers']:
                 authors[k]['corresp'] = email.rstrip()
     elif line.startswith('\hypertarget') or line.startswith('\section'):  # hopefully not \section
-        break  # stop at the first abstract
+        break  # stop at the start of a section
 
-# read up to abstract heading
+# TODO: remove asterisk from superscripts once email address is found (if * is superscripted)
+
+# parse orcids, add to author dict
+ftex_in.seek(0)
+for i in range(struct[orcid_key]['line']+1):
+    line = ftex_in.readline()  # read up to ORCIDs section
+
 while True:
     line = ftex_in.readline()
-    if line.startswith('\section{Abstract}'):
-        break
+    if line != '\n':  # there is something to parse
+        if line.startswith('\hypertarget') or line.startswith('\section'):
+            break
+        # figure out who the author is, locate in author dict
+        for k in authors.keys():
+            if authors[k]['name'] == line.split(':')[0]:
+                authors[k]['orcid'] = line.split(':')[1].lstrip().rstrip()
+
+
+# parse CRediT section, make a dict for that
+ftex_in.seek(0)
+for i in range(struct[credit_key]['line']+1):
+    line = ftex_in.readline()  # read up to CRediT section
+
+credits = {}
+while True:
+    line = ftex_in.readline()
+    if line != '\n':
+        if line.startswith('\hypertarget') or line.startswith('\section'):
+            break
+        key = line.split(':')[0]
+        vals = line.split(':')[1].lstrip().rstrip()
+        credits[key] = vals
+
+# go to the abstract and start reading that stuff
+ftex_in.seek(0)
+for i in range(struct[abs1_key]['line']+1):
+    line = ftex_in.readline()
 
 # read lines cautiously, find the (first/English-language) abstract text
+summaries = {}; scount = 0
 abst = ""
 while True:
     line = ftex_in.readline()
     if not line.startswith('\hypertarget'):
-        abst = abst + line.rstrip()
-    else:
+        abst = abst + line.rstrip()  # this will probably be just one line(/one paragraph)
+    else:                            # but there can be multi-paragraph abstracts
         break
+summaries[scount] = {'text':abst,'name':'Abstract','language':'English'}
+scount += 1
 
 other_langs = []
-abs2 = None; abs2_dict = {}
 # deal with the second-language abstract  if there is one
 if line.startswith('\hypertarget{second-language-abstract'):
-    ftex_in, line, abs2, abs2_dict = ut.get_abstract(ftex_in) # this function reads up to the
+    ftex_in, line, abs2_dict = ut.get_abstract(ftex_in) # this function reads up to the
     other_langs.append(abs2_dict['language'])                 # next \hypertarget
+    summaries[scount] = abs2_dict
+    scount += 1
 
-abs3 = None; abs3_dict = {}
 # deal with the third-language abstract  if there is one
 if line.startswith('\hypertarget{third-language-abstract'):
-    ftex_in, line, abs3, abs3_dict = ut.get_abstract(ftex_in)
+    ftex_in, line, abs3_dict = ut.get_abstract(ftex_in)
     other_langs.append(abs3_dict['language'])
+    summaries[scount] = abs3_dict
+    scount += 1
+
+# parse (English-language) non-technical summary if present
+if line.startswith('\hypertarget{non-technical-summary'):
+    line = ftex_in.readline()  # get past \section
+    nontech = ""
+    while True:
+        line = ftex_in.readline()
+        if not line.startswith('\hypertarget'):
+            nontech = nontech + line.rstrip()
+        else:
+            break
+    summaries[scount] = {'text':nontech,'name':'Non-technical summary','language':'English'}
+    scount += 1
 
 # feed some info to the header setup code
-ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,review=review,\
-            other_langs=other_langs)
+ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,credits=credits,\
+            review=review,other_langs=other_langs)
 
 # add abstract(s) after header
-ftex_out = tt.add_abstract(ftex_out,abst,abs2=abs2,abs2_dict=abs2_dict,\
-                            abs3=abs3,abs3_dict=abs3_dict)
+ftex_out = tt.add_abstracts(ftex_out,summaries)
 
 ########################################################################
 # go through the rest of the sections! and deal with citations, figures, and equations
@@ -166,12 +244,15 @@ while not goto_end:
             ftex_out.write('%s{%s}\n' % (stype,sname))
 
     else:  # not a section header, so parse as a line and deal with citations or math or whatever
-        if line.startswith('\('):  # possibly an equation
+        if line.startswith('\(') or line.startswith('\['):  # possibly an equation
             print(line[:-1])
             iq = input('is this an equation? [y]/n') or 'y'
+            sw = line[:2]
+            if sw[1] == '(': ew = '\)'
+            if sw[1] == '[': ew = '\]'
             if iq.lower() == 'y':
                 # scrape off the \( and \) bits since we're putting this in an environment
-                line = line.split('\)')[0].split('\(')[1]
+                line = line.split(sw)[0].split(ew)[1]
                 ftex_out.write('\\begin{equation}\n')
                 ftex_out.write(line)
                 ftex_out.write('\n')
