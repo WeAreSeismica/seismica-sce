@@ -26,9 +26,6 @@ for key in bib_OD:
         else: # possibly 'month year'?
             entry['year'] = entry['date'].split(' ')[1]
 
-    if 'doi' in entry.keys():  # put doi in "note" so it's displayed for apalike
-        entry['note'] = entry['doi']
-
     # for each, reformat key to be what we'd look for in inline citations
     # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
     if len(entry.authors()) > 2:
