@@ -216,7 +216,7 @@ def parse_parentheticals(line,bibkeys):
         # check if this is inline math
         if pretext[-1] == '\\':
             to_write += pretext
-            to_write += line[open_par[k]:clse_par[k]+1]  # TODO: does this preserve the \( and \) ??
+            to_write += line[open_par[k]:clse_par[k]+1]
             break
 
         # if not math, continue to parse:
