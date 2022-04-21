@@ -132,7 +132,7 @@ while True:
     elif line.startswith('\hypertarget') or line.startswith('\section'):  # hopefully not \section
         break  # stop at the start of a section
 
-# TODO: remove asterisk from superscripts once email address is found (if * is superscripted)
+# remove asterisk from superscripts once email address is found (if * is superscripted)
 for a in authors.keys():
     if '*' in authors[a]['supers']:  # need to remove extra * because \thanks takes care of that
         slist = authors[a]['supers'].split(',')
