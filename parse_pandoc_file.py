@@ -11,6 +11,7 @@ import os, sys
 # NOTE: this script assumes:
     # the input file used the seismica docx/odt template, and used it *properly* (esp. headers/styles)
     # equations were typeset using native equation thing
+    # pandoc was run with the right options
     # there are no more than 99 equations, figures, and tables, respectively, in the document
     # a bibtex file using the reference list has already been created (see: anystyle, fix_bibtex.py)
     # references/bibliography is the LAST SECTION of the document, nothing after it will be kept
@@ -132,6 +133,16 @@ while True:
         break  # stop at the start of a section
 
 # TODO: remove asterisk from superscripts once email address is found (if * is superscripted)
+for a in authors.keys():
+    if '*' in authors[a]['supers']:  # need to remove extra * because \thanks takes care of that
+        slist = authors[a]['supers'].split(',')
+        star_ind = np.where(slist == '*')[0]
+        slist = np.delete(slist,star_ind)
+        authors[a]['supers'] = ','.join(slist)
+        #print('Here is a list of superscripts: %s')
+        #print('please enter the relevant ones, comma-separated, without the *')
+        #new = input('-> ')
+        #authors[a]['supers'] = new
 
 # parse orcids, add to author dict
 ftex_in.seek(0)
