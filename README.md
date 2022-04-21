@@ -58,6 +58,8 @@ A local installation of the anystyle gem is highly recommended. On a linux machi
 ## TODO: 
 - make sure catch for supplemental figures/tables works for in-text references
 - figure out longtable/table parsing?
+- check YYYYa/YYYYb citations
+- manual checks on document structure - did we get it right?
 - more user-friendly startup (ie input filenames, rather than editing scripts)
     - related: complete workflow that runs all scripts in sequence automatically
     - and maybe make this all install as a package?
