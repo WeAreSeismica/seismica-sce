@@ -17,7 +17,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     if anon: docops += 'anonymous,'
     docops = docops[:-1]  # remove trailing comma
 
-    header1 = """% Seismica LuaLatex Template
+    header1 = """% Seismica Latex Template
 %!TEX TS-program = lualatex
 %!TEX encoding = UTF-8 Unicode
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
