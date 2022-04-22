@@ -187,6 +187,16 @@ def get_abstract(ftex_in):
 
     return ftex_in, line, abs2_dict
 
+def print_reminders(ofile_tex):
+    print('An output tex file has been written at: %s' % ofile_tex)
+    print('Unparsable table/figure info is in junk.tex')
+    print('Remember to update metadata in header: editor, volume #, DOI, dates, etc')
+    return
+
+########################################################################
+# citations
+########################################################################
+
 def parse_parentheticals(line,bibkeys):
     """
     for a line of text, parse parentheticals for citations and replace with appropriate \cite calls
