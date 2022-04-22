@@ -1,12 +1,27 @@
 import numpy as np
 import biblib.bib as bbl
+from argparse import ArgumentParser
 import os, sys
 
-in_bib = 'refs.bib'  # initial .bib from anystyle
-out_bib = 'test_init.bib'   # place to write corrected bib entries
+parser = ArgumentParser()
+parser.add_argument('--ifile','-i',type=str,help='path to input file')
+parser.add_argument('--ofile','-o',type=str,help='path to output file')
+args = parser.parse_args()
+
+in_bib = args.ifile
+if in_bib == None:
+    in_bib = input('Enter path to input file: ') or 'refs.bib'
+assert os.path.isfile(in_bib),'input bibfile does not exist'
+out_bib = args.ofile
+if out_bib == None:
+    of1 = in_bib[:-4]+'_corr.bib'
+    out_bib = input('Enter path to output file, or skip to use %s: ' % of1) or of1 
+if os.path.isfile(out_bib):
+    iq = input('warning: %s already exists. Overwrite? [y]/n: ' % out_bib) or 'y'
+    if iq == 'n':
+        sys.exit()
 
 parser = bbl.Parser()  # parser for bibtex
-
 parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 
 # get entries
@@ -23,8 +38,13 @@ for key in bib_OD:
     if 'date' in entry.keys():
         if len(entry['date']) == 4: # assume this means it's a year, which is probably true
             entry['year'] = entry['date']
-        else: # possibly 'month year'?
-            entry['year'] = entry['date'].split(' ')[1]
+        else: # possibly 'month year'? or some other format, check on that
+            entry['year'] = entry['date'].split(' ')[-1]
+            if len(entry['year']) != 4:
+                print('date is %s, year set to %s' % (entry['date'],entry['year']))
+                iy = input('enter corrected year if needed: ') or None
+                if iy != None:
+                    entry['year'] = iy
 
     # for each, reformat key to be what we'd look for in inline citations
     # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
