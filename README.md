@@ -23,28 +23,28 @@ A local installation of the anystyle gem is recommended but not required as long
     - template formatting is generally intact
 
 - convert article file to latex
-    - docx: pandoc file.docx -f docx -t latex --wrap=none -s -o file_pandoc.tex
-    - odt: pandoc file.odt -f odt -t latex --wrap=none -s -o file_pandoc.tex
+    - docx: `pandoc file.docx -f docx -t latex --wrap=none -s -o file_pandoc.tex`
+    - odt: `pandoc file.odt -f odt -t latex --wrap=none -s -o file_pandoc.tex`
 
 - convert text bibliography into a .bib file by either:
-    - running the anystyle gem locally: copy the text of the references into a plain text file (e.g. refs.txt) with one reference per line, and then run `anystyle -f bib parse refs.txt .` to generate the file refs.bib (filename will be the same as the input, with suffix replaced by .bib)
+    - running the anystyle gem locally: copy the text of the references into a plain text file (e.g. `refs.txt`) with one reference per line, and then run `anystyle -f bib parse refs.txt .` to generate the file `refs.bib` (filename will be the same as the input, with suffix replaced by .bib)
     - copy-pasting bibliography from docx/odt into anystyle.io, and copy-pasting the output into a new .bib file
 
 - fix anystyle bibtex file year fields and keys, make a new .bib file
-    - fix_bibtex.py --ifile refs.bib (--ofile refs_corr.bib)
-        - filenames can be whatever you want; ofile can be set or the script will set it for you
+    - `fix_bibtex.py --ifile refs.bib (--ofile refs_corr.bib)`
+        - filenames can be whatever you want; ofile is optional, or the script can set it for you
     - any non-ascii keys will be printed to stdout with option to correct while running script
 
 - parse the pandoc output tex file to a better tex format
-    - parse_pandoc_file.py --bibfile refs.bib --ifile tex_in.tex (--ofile tex_out.tex)
-    - unparsed tables etc will go in junk.tex
-    - temp.tex is used for intermediate stages of parsing
+    - `parse_pandoc_file.py --bibfile refs.bib --ifile tex_in.tex (--ofile tex_out.tex)`
+    - unparsed tables etc will go in `junk.tex`
+    - `temp.tex` is used for intermediate stages of parsing
 
 - run bibtex and lualatex, look at the output and figure out what needs fixing
-    - lualatex tex_out.tex -> tex_out.pdf
-    - bibtex tex_out.aux
-    - lualatex ''
-    - lualatex ''
+    - `lualatex tex_out.tex` -> `tex_out.pdf`
+    - `bibtex tex_out.aux`
+    - `lualatex tex_out.tex`
+    - `lualatex tex_out.tex`
         - running at least twice gives inline references a chance to sort themselves out
 
 - manually set options (breakmath, fast reports, proof) as necessary
