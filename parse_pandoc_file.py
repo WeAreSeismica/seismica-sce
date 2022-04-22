@@ -2,6 +2,7 @@ import biblib.bib as bbl
 import sce_utils.tex_templates as tt
 import sce_utils.utils as ut
 import numpy as np
+from argparse import ArgumentParser
 import os, sys
 
 
@@ -17,22 +18,32 @@ import os, sys
     # references/bibliography is the LAST SECTION of the document, nothing after it will be kept
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
-    # command line args, better workflow in general
     # finding ORCID and CRediT sections if not automatically ID'd
-    # editor name, dates rec/acc/pub, volume, issue, DOI for the article itself [maybe interactive]
-        # OR at least print some message reminding people to change them
-        # (there will have to be a checklist for a bunch of this stuff)
-    # fast reports options? review/anonymous options?
 ########################################################################
 
 ########################################################################
-# set filenames and review status  TODO: set these filenames to get started
-bibtex = 'test_init.bib'
-tex_in = 'test_pandoc.tex'
-tex_mid = 'test_temp.tex'
-tex_out = 'test_init.tex'
+# set filenames
+########################################################################
+parser = ArgumentParser()
+parser.add_argument('--bibfile','-b',type=str,help='path to bibfile')
+parser.add_argument('--ifile','-i',type=str,help='path to tex file from pandoc')
+parser.add_argument('--ofile','-o',type=str,help='path to output tex file')
+args = parser.parse_args()
+bibtex = args.bibfile
+if bibtex == None:
+    bibtex = input('Enter path to bibfile: ') or 'refs_corr.bib'
+assert os.path.isfile(bibtex),'bibfile does not exist')
+tex_in = args.ifile
+if tex_in == None:
+    tex_in = input('Enter path to pandoc tex file: ') or 'test_pandoc.tex'
+assert os.path.isfile(tex_in),'input tex file does not exist')
+tex_out = args.ofile
+if tex_out == None:
+    of1 = tex_in[:-4] + '_corr.tex'
+    tex_out = input('Enter path to output tex file, or use %s: ' % of1) or of1 
+tex_mid = 'temp.tex'
 junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed automatically
-review = False  # switch for line numbers (and single-column format)
+review = False  # switch for line numbers (and single-column format) - always off for production
 
 ########################################################################
 # set up files etc:
@@ -367,3 +378,5 @@ while True:
         
 ftex_in.close()
 ftex_out.close()
+
+ut.print_reminders(tex_out)
