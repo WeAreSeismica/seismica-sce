@@ -1,5 +1,7 @@
 # docx/odt parsing for Seismica
 
+These scripts are for converting docx/odt manuscript submissions into latex, specifically a tex file that will work with the Seismica latex production template. The scripts are a bit janky and not completely tested, so if anything breaks or doesn't work, it's probably my fault, not yours.
+
 ## dependencies:
 - python 3.n (preferably 3.8+)
 - numpy
@@ -10,6 +12,8 @@ A [conda](conda.io) environment is a nice way to set this up. Note that biblib i
 You will also need to have [pandoc](pandoc.org/) installed for the initial conversion of the .docx file.
 
 A local installation of the anystyle gem is recommended but not required as long as the web-hosted [anystyle.io](anystyle.io) exists. On a linux machine, this can be obtained by running: `sudo apt install ruby-dev` followed by `sudo gem install anystyle=cli`
+
+Compiling the output tex file from this set of scripts into a pdf requires the Seismica production tex template, which is available only to Seismica typesetters.
 
 
 ## general steps for the conversion process
@@ -52,14 +56,13 @@ A local installation of the anystyle gem is recommended but not required as long
     - pandoc does not extract image files from word so they will need to be uploaded separately
 - manually adjust for any citations that we couldn't parse (should be in red)
 - add extra hyphenation rules for words latex doesn't know if columns are overfull
-- manually add some header metadata eg. volume, doi, editor, dates
+- manually add header metadata eg. volume, doi, editor, dates
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
-- article options for fast reports, breakmath, and proof - part of script?
 - make sure catch for supplemental figures/tables works for in-text references
-    - do we even need this? Seismica probably will not have supplements anyway?
+- re-test the non-ascii characters stuff for bibfiles
 - figure out longtable/table parsing?
 - check YYYYa/YYYYb citations
-- related: complete workflow that runs all scripts in sequence automatically(/installs dependencies?)
-
+- make a docker instance so it's easier for people to run this whole thing
+- (incorporate relevant parts of biblib)
