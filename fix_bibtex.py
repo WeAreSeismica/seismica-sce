@@ -45,6 +45,10 @@ for key in bib_OD:
                 iy = input('enter corrected year if needed: ') or None
                 if iy != None:
                     entry['year'] = iy
+    if 'url' in entry.keys():
+        _ = entry.pop('url')
+#    if 'pages' in entry.keys():
+#        _ = entry.pop('pages')
 
     # for each, reformat key to be what we'd look for in inline citations
     # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
