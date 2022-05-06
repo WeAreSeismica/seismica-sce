@@ -124,17 +124,17 @@ def check_for_fig_tab_eqn_refs(to_write):
     check a line for 'Figure 1' or 'Equation 9' or whatever, replace those with linked refs
     """
 
-    capital_names = ['Figure','Equation','Table','Fig.','Eq.']
+    capital_names = ['Figure ','Equation ','Table ','Fig. ','Eq. ']
     ref_names = ['fig','eq','tbl','fig','eq']
 
     for iw, word in enumerate(capital_names):
-        if word in to_write.split() or '('+word in to_write.split():
+        if word in to_write:
             nrefs = len([m.start() for m in finditer(word,to_write)])
             # for each such index, look for the number
             for ireplace in range(nrefs):
                 inds = np.array([m.start() for m in finditer(word,to_write)])
                 ifig = inds[ireplace]
-                shift = len(word) + 1
+                shift = len(word) # + 1  # added space to keys to avoid "Figured"
                 try:
                     fig_num = int(to_write[ifig+shift])
                 except ValueError:  # this isn't an int
@@ -142,7 +142,7 @@ def check_for_fig_tab_eqn_refs(to_write):
                         fig_num = 999
                     else:
                         try:
-                            shift = len(word) + 2
+                            shift = len(word) + 1 # + 2
                             fig_num = int(to_write[ifig+shift])  # maybe the number was in parens?
                         except ValueError:
                             fig_num = 999
