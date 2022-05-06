@@ -32,11 +32,11 @@ args = parser.parse_args()
 bibtex = args.bibfile
 if bibtex == None:
     bibtex = input('Enter path to bibfile: ') or 'refs_corr.bib'
-assert os.path.isfile(bibtex),'bibfile does not exist')
+assert os.path.isfile(bibtex),'bibfile does not exist'
 tex_in = args.ifile
 if tex_in == None:
     tex_in = input('Enter path to pandoc tex file: ') or 'test_pandoc.tex'
-assert os.path.isfile(tex_in),'input tex file does not exist')
+assert os.path.isfile(tex_in),'input tex file does not exist'
 tex_out = args.ofile
 if tex_out == None:
     of1 = tex_in[:-4] + '_corr.tex'
@@ -309,16 +309,22 @@ while not goto_end:
             to_write = ut.check_for_fig_tab_eqn_refs(to_write)
 
             # a few last checks for special cases:
-            if to_write.startswith('Figure') or to_write.startswith('Table'): # likely a caption
+            if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'): # likely a caption
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
                     cap = to_write.split('\\ref{')[1]
                     tag = cap.split('}')[0]
-                    if to_write.startswith('Figure'):
-                        figcap[tag] = to_write.split(tag)[1][2:].lstrip()
-                    elif to_write.startswith('Table'):
-                        tabcap[tag] = to_write.split(tag)[1][2:].lstrip()
+                    if to_write.startswith('\\textbf{Figure'):
+                        test = to_write.split(tag)[1][2:].lstrip()
+                        if test.startswith('}'):
+                            test = test[1:].lstrip()
+                        figcap[tag] = test
+                    elif to_write.startswith('\\textbf{Table'):
+                        test = to_write.split(tag)[1][2:].lstrip()
+                        if test.startswith('}'):
+                            test = test[1:].lstrip()
+                        tabcap[tag] = test
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
                 ftex_out.write('\\noindent \n')   # are probably continuing sentences after eqns
