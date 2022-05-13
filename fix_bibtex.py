@@ -66,12 +66,12 @@ for key in bib_OD:
         nextletter = chr(ord(alphabet[-1]) + 1)
     newkey= newkey + nextletter  # this is what we'll use for bibtex
 
-    if len(newkey) != len(newkey.encode()):
-        print('key ascii error: ',newkey)  # non-ascii is fine within citations, just not in keys
-        newkey2 = input('enter a corrected key to use for this entry: ') or newkey
-        if newkey2 == newkey:
-            print('not correcting key; this may cause problems later')
-        newkey = newkey2
+#   if len(newkey) != len(newkey.encode()):
+#       print('key ascii error: ',newkey)  # non-ascii is fine within citations, just not in keys
+#       newkey2 = input('enter a corrected key to use for this entry: ') or newkey
+#       if newkey2 == newkey:
+#           print('not correcting key; this may cause problems later')
+#       newkey = newkey2
 
     newkey_list.append(newkey)
     entry.key = newkey

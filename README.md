@@ -61,7 +61,6 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 
 ## TODO: 
 - make sure catch for supplemental figures/tables works for in-text references
-- re-test the non-ascii characters stuff for bibfiles
 - figure out longtable/table parsing?
 - check YYYYa/YYYYb citations
 - make a docker instance so it's easier for people to run this whole thing
