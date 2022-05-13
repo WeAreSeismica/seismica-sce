@@ -2,7 +2,7 @@ import os, sys, datetime
 
 def set_up_header(fout,title,authors={},affils={},credits={},\
                   dates={'rec':'January 1, 1900','acc':'February 29, 1900','pub':'April 1, 1900'},\
-                  edname='A. Editor',doi='10.100',volume=0,issue=0,\
+                  edname='A. Editor',copyedname='C. Copyed',doi='10.100',volume=0,issue=0,\
                   review=True,onecol=False,fast=False,anon=False,\
                   other_langs=[]):
     """
@@ -29,6 +29,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 \\accepteddate{"""+dates['acc']+"""}
 \publisheddate{"""+dates['pub']+"""}
 \editorname{"""+edname+"""}
+\copyedname{"""+copyedname+"""}
 
 \dois{"""+doi+"""}
 \\thevolume{"""+str(volume)+"""}
