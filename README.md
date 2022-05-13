@@ -60,7 +60,6 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
-- make sure catch for supplemental figures/tables works for in-text references
 - figure out longtable/table parsing?
 - check YYYYa/YYYYb citations
 - make a docker instance so it's easier for people to run this whole thing
