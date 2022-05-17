@@ -262,7 +262,7 @@ while not goto_end:
             goto_end = True
         else:
             sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])  # strip leading number
-        if sname != '':
+        if sname != '' and not goto_end:
             ftex_out.write('%s{%s}\n' % (stype,sname))
 
     else:  # not a section header, so parse as a line and deal with citations or math or whatever
