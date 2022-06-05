@@ -19,6 +19,7 @@ import os, sys
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
     # finding ORCID and CRediT sections if not automatically ID'd
+    # scan for URLs, wrap with \url{} for line breaking
 ########################################################################
 
 ########################################################################
@@ -63,7 +64,8 @@ figcap = {}; tabcap = {}
 
 # for sections that aren't numbered, lowercase and with spaces as -
 special_section_names = ['acknowledgements','acknowledgments',\
-                        'data-availability','data-and-code-availability']
+                        'data-availability','data-and-code-availability',\
+                        'competing-interests']
 skip_sections = ['references','bibliography']  # when we get to this header, skip to the end
 
 ########################################################################
