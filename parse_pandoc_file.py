@@ -235,7 +235,7 @@ if line.startswith('\hypertarget{non-technical-summary'):
 
 # feed some info to the header setup code
 ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,credits=credits,\
-            review=review,other_langs=other_langs)
+            other_langs=other_langs)
 
 # add abstract(s) after header
 ftex_out = tt.add_abstracts(ftex_out,summaries)
@@ -344,8 +344,10 @@ fjunk.close()
 ftex_in = open(tex_mid,'r')  # open intermediate file
 ftex_out = open(tex_out,'w')
 
+beg_doc = False
 while True:
     line = ftex_in.readline()
+    if line.startswith('\\begin{document}'): beg_doc = True
     if line.startswith('\\begin{figure}'):
         temp = [line]
         while True:
@@ -382,6 +384,11 @@ while True:
         ftex_out.write(line)
         break
     else:
+        # assuming captions, names, affils are mostly ok, check for non-ascii characters
+        # that will need to be fixed to render properly in tex
+        if beg_doc:
+            if len(line) != len(line.encode()):
+                line = line + ' \\textcolor{red}{non-ascii}\n'
         ftex_out.write(line)
         
 ftex_in.close()
