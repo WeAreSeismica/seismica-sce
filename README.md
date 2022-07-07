@@ -1,6 +1,6 @@
 # docx/odt parsing for Seismica
 
-These scripts are for converting docx/odt manuscript submissions into latex, specifically a tex file that will work with the Seismica latex production template. The scripts are a bit janky and not completely tested, so if anything breaks or doesn't work, it's probably my fault, not yours.
+These scripts are for converting docx/odt manuscript submissions into latex, specifically a tex file that will work with the Seismica latex submission template. The scripts are a bit janky and not completely tested, so if anything breaks or doesn't work, it's probably my fault, not yours.
 
 ## dependencies:
 - python 3.n (preferably 3.8+)
@@ -13,7 +13,7 @@ You will also need to have [pandoc](pandoc.org/) installed for the initial conve
 
 A local installation of the anystyle gem is recommended but not required as long as the web-hosted [anystyle.io](anystyle.io) exists. On a linux machine, this can be obtained by running: `sudo apt install ruby-dev` followed by `sudo gem install anystyle=cli`
 
-Compiling the output tex file from this set of scripts into a pdf requires the Seismica production tex template, which is available only to Seismica typesetters.
+Compiling the output tex file from this set of scripts into a pdf requires the Seismica submission tex template.
 
 
 ## general steps for the conversion process
@@ -44,19 +44,20 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - unparsed tables etc will go in `junk.tex`
     - `temp.tex` is used for intermediate stages of parsing
 
-- run bibtex and lualatex, look at the output and figure out what needs fixing
-    - `lualatex tex_out.tex` -> `tex_out.pdf`
+- run bibtex and pdflatex, look at the output and figure out what needs fixing
+    - `pdflatex tex_out.tex` -> `tex_out.pdf`
     - `bibtex tex_out.aux`
-    - `lualatex tex_out.tex`
-    - `lualatex tex_out.tex`
+    - `pdflatex tex_out.tex`
+    - `pdflatex tex_out.tex`
         - running at least twice gives inline references a chance to sort themselves out
 
-- manually set options (breakmath, fast reports, proof) as necessary
+- manually set options (breakmath, languages, etc) as necessary
 - manually link figure files at the right sizes, adjust placement of automated \includegraphics as needed
     - pandoc does not extract image files from word so they will need to be uploaded separately
 - manually adjust for any citations that we couldn't parse (should be in red)
 - add extra hyphenation rules for words latex doesn't know if columns are overfull
-- manually add header metadata eg. volume, doi, editor, dates
+- manually fix any non-ascii characters that don't print correctly, including in captions, authors, affiliations, and abstract (which aren't checked)
+- manually wrap any urls in the text with \url{}
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
