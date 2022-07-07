@@ -1,9 +1,7 @@
 import os, sys, datetime
 
 def set_up_header(fout,title,authors={},affils={},credits={},\
-                  dates={'rec':'January 1, 1900','acc':'February 29, 1900','pub':'April 1, 1900'},\
-                  edname='A. Editor',copyedname='C. Copyed',doi='10.100',volume=0,issue=0,\
-                  review=True,onecol=False,fast=False,anon=False,\
+                  anon=False,langs=False,breakmath=False,preprint=False,\
                   other_langs=[]):
     """
     write out the basic seismica latex header
@@ -11,30 +9,17 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     """
     # set up general options for the template
     docops = ''
-    if review: docops += 'review,'
-    if onecol: docops += 'onecolumn,'
-    if fast: docops += 'fastreport,'
     if anon: docops += 'anonymous,'
+    if langs: docops += 'languages,'
+    if breakmath: docops += 'breakmath,'
+    if preprint: docops += 'preprint,'
     docops = docops[:-1]  # remove trailing comma
 
-    header1 = """% Seismica Latex Template
-%!TEX TS-program = lualatex
-%!TEX encoding = UTF-8 Unicode
+    header1 = """% Seismica Submission Template
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass["""+docops+"""]{seismica} 
 \\title{"""+title+"""}
-
-\\receiveddate{"""+dates['rec']+"""}
-\\accepteddate{"""+dates['acc']+"""}
-\publisheddate{"""+dates['pub']+"""}
-\editorname{"""+edname+"""}
-\copyedname{"""+copyedname+"""}
-
-\dois{"""+doi+"""}
-\\thevolume{"""+str(volume)+"""}
-\\thenumber{"""+str(issue)+"""}
-\\theyear{"""+str(datetime.date.today().year)+"""}
 
 """
     fout.write(header1)
@@ -61,13 +46,20 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout.write('\n')
 
     if len(other_langs) > 0:
-        header2 = '\\setotherlanguages{'
+        header2 = """\\usepackage{polyglossia}
+\\usepackage{fontspec}
+\\setmainlanguage[]{english}
+\\setotherlanguages{
+"""
         for l in other_langs:
             header2 += '%s,' % l
         header2 = header2[:-1]
-        header2 += '}'
+        header2 += """}\n
+%\\newfontfamily\thaifont[Script=Thai]{Noto Serif Thai}
+header2 += '%% also see https://www.overleaf.com/latex/examples/how-to-write-multilingual-text-with-different-scripts-in-latex/wfdxqhcyyjxz for reference
+
+"""
         fout.write(header2)
-        fout.write('\n')
 
     fout.write('\\begin{document}')
 
