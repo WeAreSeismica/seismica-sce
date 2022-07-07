@@ -60,6 +60,10 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
+- print warning for references that start with special characters
+- scan for urls and wrap them? esp for data and code availability statement
+- is it possible to scan captions, authors, affils, etc for non-ascii without messing up printing?
+- can we replace non-ascii automatically in a nice way? maybe some easy ones in a dict, at least?
 - figure out longtable/table parsing?
 - check YYYYa/YYYYb citations
 - make a docker instance so it's easier for people to run this whole thing
