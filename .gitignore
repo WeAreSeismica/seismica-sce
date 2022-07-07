@@ -1,0 +1,17 @@
+.*swp
+seismica.cls
+abbrvnat_seismica.bst
+banner.png
+banner_fast.png
+*/__pycache__/*
+empty.png
+*.tex
+*.pdf
+*.bib
+*.txt
+*.aux
+*.bbl
+*.blg
+*.log
+*.docx
+*.odt
