@@ -190,7 +190,8 @@ def get_abstract(ftex_in):
 def print_reminders(ofile_tex):
     print('An output tex file has been written at: %s' % ofile_tex)
     print('Unparsable table/figure info is in junk.tex')
-    print('Remember to update metadata in header: editor, volume #, DOI, dates, etc')
+    print('Remember to check authors/affils/abstracts/captions for non-ascii characters')
+#    print('Remember to update metadata in header: editor, volume #, DOI, dates, etc')
     return
 
 ########################################################################
