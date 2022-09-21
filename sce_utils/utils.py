@@ -39,6 +39,11 @@ def document_structure(ftex_in):
                     'level': 0,\
                     'line': i}
             struct['b'] = sect
+        elif line.startswith('\\title{'):
+            sect = {'sname':line.split('{')[-1][:-1],\
+                    'level':-1,\
+                    'line':i}
+            struct['ti'] = sect
         i += 1
     return ftex_in, struct
 
@@ -208,6 +213,10 @@ def parse_parentheticals(line,bibkeys):
         open_par = [pos for pos, char in enumerate(line) if char == '(']
         clse_par = [pos for pos, char in enumerate(line) if char == ')']
         if len(open_par) != len(clse_par):
+            # if there are excess ), check if they are for in-paragraph numbering/lists
+            # specifically these should be ) that are not preceded by ( in index alternation
+
+
             print('mismatched parentheticals :(')
             print(line)
             sys.exit()

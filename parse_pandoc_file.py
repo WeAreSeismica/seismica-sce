@@ -93,16 +93,20 @@ ftex_in.seek(0)
 for i in range(struct['b']['line']+1):
     line = ftex_in.readline()  # should read exactly to \begin{document}
 
-while True:
-    line = ftex_in.readline()
-    if line != '\n':
-        break  # this should be the title, fingers crossed
-article_title = line.rstrip() # get the title text
+# if title is in the document structure, we're done!
+if 'ti' in struct.keys():
+    article_title = struct['ti']['sname']
+else:  # hopefully the title is the first line after begin{document}
+    while True:
+        line = ftex_in.readline()
+        if line != '\n':
+            break  # this should be the title, fingers crossed
+    article_title = line.rstrip() # get the title text
 
 # read in author info (names, affiliations, email for corresponding if applicable)
 while True:  # read up to where authors start
     line = ftex_in.readline()
-    if line != '\n':
+    if line != '\n' and not line.startswith('\maketitle'):
         break  # author names, prior to affiliations
 authors = {}  # read author names and superscripts for affiliations
 for i,bit in enumerate(line.split('}')[:-1]):
