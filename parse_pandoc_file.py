@@ -152,14 +152,13 @@ while True:
 # remove asterisk from superscripts once email address is found (if * is superscripted)
 for a in authors.keys():
     if '*' in authors[a]['supers']:  # need to remove extra * because \thanks takes care of that
-        slist = authors[a]['supers'].split(',')
-        star_ind = np.where(slist == '*')[0]
-        slist = np.delete(slist,star_ind)
-        authors[a]['supers'] = ','.join(slist)
-        #print('Here is a list of superscripts: %s')
-        #print('please enter the relevant ones, comma-separated, without the *')
-        #new = input('-> ')
-        #authors[a]['supers'] = new
+        star_ind = authors[a]['supers'].find('*')
+        if star_ind == len(authors[a]['supers'])-1:
+            authors[a]['supers'] = authors[a]['supers'][:star_ind-1]
+        else:
+            pre = authors[a]['supers'][:star_ind]
+            post = authors[a]['supers'][star_ind+2:]
+            authors[a]['supers'] = pre+post
 
 # parse orcids, add to author dict
 ftex_in.seek(0)
