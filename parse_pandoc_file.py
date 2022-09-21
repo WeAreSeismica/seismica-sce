@@ -120,7 +120,7 @@ for i,bit in enumerate(line.split('}')[:-1]):
     else:
         nm = bit2[0]
     sp = bit2[1]
-    authors[i] = {'name':nm,'supers':sp}
+    authors[i] = {'name':nm.lstrip().rstrip(),'supers':sp}
 
 affils = {}  # read affiliations that go with those superscripts
 while True:
@@ -130,7 +130,7 @@ while True:
         sp = bits[0].split('{')[1]
         pl = bits[1].rstrip()
         try:
-            affils[int(sp)] = {'super':sp,'place':pl}
+            affils[int(sp)] = {'super':sp,'place':pl.lstrip().rstrip()}
         except ValueError:  # probably a superscript asterisk
             if sp == '*':
                 email = line.split(':')[-1].lstrip()
@@ -325,11 +325,13 @@ while not goto_end:
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
+                            test = ut.check_non_ascii(test)
                         figcap[tag] = test
                     elif to_write.startswith('\\textbf{Table'):
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
+                            test = ut.check_non_ascii(test)
                         tabcap[tag] = test
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
@@ -391,8 +393,7 @@ while True:
         # assuming captions, names, affils are mostly ok, check for non-ascii characters
         # that will need to be fixed to render properly in tex
         if beg_doc:
-            if len(line) != len(line.encode()):
-                line = line + ' \\textcolor{red}{non-ascii}\n'
+            line = ut.check_non_ascii(line)
         ftex_out.write(line)
         
 ftex_in.close()
