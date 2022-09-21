@@ -1,5 +1,5 @@
 import numpy as np
-from re import finditer
+from re import finditer, findall
 import os, sys
 
 ####
@@ -166,12 +166,12 @@ def check_for_fig_tab_eqn_refs(to_write):
                         line_end = to_write[ifig+shift+2:]
                     else:
                         line_end = to_write[ifig+shift+1:]
-                    to_write = line_start + word + '~\\ref{%s%i}' % (ref_names[iw],fig_num) + line_end
+                    to_write = line_start + word + '\\ref{%s%i}' % (ref_names[iw],fig_num) + line_end
 
     return to_write
 
 
-nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'\mu','°':'$^\circ$'}
+nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$','ö':'ö','é':'é','é':'é'}
 
 def check_non_ascii(line):
     """
@@ -187,6 +187,9 @@ def check_non_ascii(line):
             ibad.append(i)
             what.append(s)
 
+    if len(ibad) == 0:
+        return line
+
     oline = ''
     for j, i in enumerate(ibad):
         if j == 0:  # first in the list
@@ -198,12 +201,9 @@ def check_non_ascii(line):
             oline += nonasc[what[j]]
         else:
             oline += '\\textcolor{red}{nasc}'
-    oline += line[ibad[j]:]
-
-    print(what)
+    oline += line[ibad[j]+1:]
 
     return oline
-
 
 def get_abstract(ftex_in):
     """
@@ -223,6 +223,7 @@ def get_abstract(ftex_in):
                 abs2 = abs2 + line.rstrip()
             else:
                 break 
+        abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
         abs2_dict['text'] = abs2
 
     return ftex_in, line, abs2_dict
