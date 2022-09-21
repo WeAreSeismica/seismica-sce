@@ -40,7 +40,7 @@ def document_structure(ftex_in):
                     'line': i}
             struct['b'] = sect
         elif line.startswith('\\title{'):
-            sect = {'sname':line.split('{')[-1][:-1],\
+            sect = {'sname':line.split('{')[-1].split('}')[0],\
                     'level':-1,\
                     'line':i}
             struct['ti'] = sect
@@ -169,6 +169,41 @@ def check_for_fig_tab_eqn_refs(to_write):
                     to_write = line_start + word + '~\\ref{%s%i}' % (ref_names[iw],fig_num) + line_end
 
     return to_write
+
+
+nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'\mu','°':'$^\circ$'}
+
+def check_non_ascii(line):
+    """
+    go through a line and either highlight non-ascii characters in red or replace them from 
+    a pre-set list
+    """
+    ibad = []
+    what = []
+    for i,s in enumerate(line):
+        try:
+            s.encode('ascii')
+        except:
+            ibad.append(i)
+            what.append(s)
+
+    oline = ''
+    for j, i in enumerate(ibad):
+        if j == 0:  # first in the list
+            pre = line[:i]
+        else:
+            pre = line[ibad[j-1]+1:i]
+        oline += pre
+        if what[j] in nonasc.keys():
+            oline += nonasc[what[j]]
+        else:
+            oline += '\\textcolor{red}{nasc}'
+    oline += line[ibad[j]:]
+
+    print(what)
+
+    return oline
+
 
 def get_abstract(ftex_in):
     """
