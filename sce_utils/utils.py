@@ -171,7 +171,8 @@ def check_for_fig_tab_eqn_refs(to_write):
     return to_write
 
 
-nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$','ö':'ö','é':'é','é':'é'}
+nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$',\
+            'ö':'ö','é':'é','é':'é'}
 
 def check_non_ascii(line):
     """
@@ -231,7 +232,7 @@ def get_abstract(ftex_in):
 def print_reminders(ofile_tex):
     print('An output tex file has been written at: %s' % ofile_tex)
     print('Unparsable table/figure info is in junk.tex')
-    print('Remember to check authors/affils/abstracts/captions for non-ascii characters')
+    print('Remember to check authors/affils for non-ascii characters')
 #    print('Remember to update metadata in header: editor, volume #, DOI, dates, etc')
     return
 
@@ -250,12 +251,35 @@ def parse_parentheticals(line,bibkeys):
         clse_par = [pos for pos, char in enumerate(line) if char == ')']
         if len(open_par) != len(clse_par):
             # if there are excess ), check if they are for in-paragraph numbering/lists
-            # specifically these should be ) that are not preceded by ( in index alternation
+            # make paired list of indices and types
+            ipar = np.hstack((np.array(open_par),np.array(clse_par)))
+            ioc = np.hstack((np.zeros(len(open_par)),np.ones(len(clse_par))))
+            order = np.argsort(ipar)  # sort
+            ioc = ioc[order]; ipar = ipar[order]
 
+            # find any ) that are not preceded by (
+            notclse = []
+            for i,ii in enumerate(ioc):
+                if ii == 1 and ioc[i-1] != 0:  # don't need to worry about 0th index being )
+                                               # because we start with 'if ( in line'
+                    iq = input('is this in-line numbering? [y]/n \n \t%s' \
+                                % line[ipar[i]-5:ipar[i]+5]) or 'y'
+                    if iq.lower() != 'y':
+                        print('mismatched parentheticals :(')
+                        print(line)
+                        sys.exit()
+                    else:
+                        notclse.append(ipar[i])
 
-            print('mismatched parentheticals :(')
-            print(line)
-            sys.exit()
+            if len(notclse) > 0:  # now take the ok extra close parens out of clse_par
+                clse_clean = []
+                for c in clse_par:
+                    if c not in notclse:
+                        clse_clean.append(c)
+            clse_par = clse_clean
+            print('fixed?')
+
+            assert len(open_par) == len(clse_par), 'tried to match ( and ) but it failed'
 
     else:  # no parentheticals in this line of text:
         return line
@@ -420,7 +444,7 @@ def _parse_paren(paren, pretext, bibkeys):
 
     # combine citations into \citep, including preamble if there is one
     if len(citations) == 0:  # we failed to parse anything here :(
-        parsed = '(' + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
+        parsed = '(' + badtext + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
     else:
         if is_preamble:
             parsed = '\citep[%s][]{' % preamble_text
