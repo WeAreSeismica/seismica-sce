@@ -442,9 +442,14 @@ def _parse_paren(paren, pretext, bibkeys):
             if not is_badref and not is_abamb:  # we parsed it! yay!
                 citations.append(test_cite+'a')
 
+    if len(badtext) != 0:
+        badtext = ' \\textcolor{red}{NOTE ' + badtext + '}'
     # combine citations into \citep, including preamble if there is one
     if len(citations) == 0:  # we failed to parse anything here :(
-        parsed = '(' + badtext + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
+        if len(badtext) != 0 and is_abamb: 
+            parsed = '(' + badtext + ')'  # might be an a/b that's the only one in the paren
+        else:
+            parsed = '(' + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
     else:
         if is_preamble:
             parsed = '\citep[%s][]{' % preamble_text
@@ -454,7 +459,7 @@ def _parse_paren(paren, pretext, bibkeys):
         parsed += '}'
 
         if len(badtext) != 0:
-            parsed += ' \\textcolor{red}{NOTE %s}' % badtext
+            parsed += badtext
 
     return parsed, pretext
 
