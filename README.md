@@ -24,6 +24,7 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - headers are using header styles
     - authors are all on one line and affiliations are right after authors, one affiliation per line
     - references or bibliography is the last section of the document
+    - author contributions are given as CRediT statements at the beginning, and there is no separate Author Contributions Statement elsewhere
     - template formatting is generally intact
 
 - convert article file to latex
@@ -44,28 +45,30 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - unparsed tables etc will go in `junk.tex`
     - `temp.tex` is used for intermediate stages of parsing
 
-- run bibtex and pdflatex, look at the output and figure out what needs fixing
-    - `pdflatex tex_out.tex` -> `tex_out.pdf`
-    - `bibtex tex_out.aux`
-    - `pdflatex tex_out.tex`
-    - `pdflatex tex_out.tex`
-        - running at least twice gives inline references a chance to sort themselves out
+- make pdf by either:
+    - compiling in overleaf with the submission template (recommended), OR:
+    - run bibtex and pdflatex locally
+        - `pdflatex tex_out.tex` -> `tex_out.pdf`
+        - `bibtex tex_out.aux`
+        - `pdflatex tex_out.tex`
+        - `pdflatex tex_out.tex`
+            - running at least twice gives inline references a chance to sort themselves out
 
 - manually set options (breakmath, languages, etc) as necessary
 - manually link figure files at the right sizes, adjust placement of automated \includegraphics as needed
     - pandoc does not extract image files from word so they will need to be uploaded separately
-- manually adjust for any citations that we couldn't parse (should be in red)
+- manually adjust for any citations and non-ascii characters that we couldn't parse (should be in red)
 - add extra hyphenation rules for words latex doesn't know if columns are overfull
-- manually fix any non-ascii characters that don't print correctly, including in captions, authors, affiliations, and abstract (which aren't checked)
-- manually wrap any urls in the text with \url{}
+- manually wrap any urls in the text that pandoc didn't catch with \url{}
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
 - print warning for references that start with special characters
-- scan for urls and wrap them? esp for data and code availability statement
-- is it possible to scan captions, authors, affils, etc for non-ascii without messing up printing?
-- can we replace non-ascii automatically in a nice way? maybe some easy ones in a dict, at least?
-- figure out longtable/table parsing?
+- add more to non-ascii checking dict, current set is not exhaustive (and maybe there's a better way to get these than adding them by hand
+- figure out longtable/table parsing so we don't need to move things to junk
+- check for excess . at the beginnings of captions when bold formatting isn't perfect
+- can we catch captions even when "Figure 1"/"Table 1" is *not* bold?
+- there's some problem with citations that are Author (yyyy), fix that
 - check YYYYa/YYYYb citations
 - make a docker instance so it's easier for people to run this whole thing
 - (incorporate relevant parts of biblib)
