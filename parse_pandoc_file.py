@@ -279,7 +279,7 @@ while not goto_end:
             if sw[1] == '[': ew = '\]'
             if iq.lower() == 'y':
                 # scrape off the \( and \) bits since we're putting this in an environment
-                line = line.split(sw)[0].split(ew)[1]
+                line = line.split(sw)[1].split(ew)[0]
                 ftex_out.write('\\begin{equation}\n')
                 ftex_out.write(line)
                 ftex_out.write('\n')
