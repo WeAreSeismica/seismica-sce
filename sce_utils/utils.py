@@ -276,8 +276,8 @@ def parse_parentheticals(line,bibkeys):
                 for c in clse_par:
                     if c not in notclse:
                         clse_clean.append(c)
-            clse_par = clse_clean
-            print('fixed?')
+                clse_par = clse_clean
+                print('fixed?')
 
             assert len(open_par) == len(clse_par), 'tried to match ( and ) but it failed'
 
