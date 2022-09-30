@@ -172,7 +172,7 @@ def check_for_fig_tab_eqn_refs(to_write):
 
 
 nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$',\
-            'ö':'ö','é':'é','é':'é'}
+            'ö':'ö','é':'é','é':'é','ć':'ć'}
 
 def check_non_ascii(line):
     """
@@ -279,7 +279,10 @@ def parse_parentheticals(line,bibkeys):
                 clse_par = clse_clean
                 print('fixed?')
 
-            assert len(open_par) == len(clse_par), 'tried to match ( and ) but it failed'
+            #assert len(open_par) == len(clse_par), 'tried to match ( and ) but it failed'
+            if len(open_par) != len(clse_par):
+                pre = '\\textcolor{red}{mismatched parens, citations not parsed in this paragraph}'
+                return pre + line
 
     else:  # no parentheticals in this line of text:
         return line
