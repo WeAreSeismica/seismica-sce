@@ -8,18 +8,35 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout is an open file handler ready for writing this header
     """
     # set up general options for the template
-    docops = ''
+    docops = 'proof,'  # start with this default for conversion, easy to remove
     if anon: docops += 'anonymous,'
     if langs: docops += 'languages,'
     if breakmath: docops += 'breakmath,'
     if preprint: docops += 'preprint,'
     docops = docops[:-1]  # remove trailing comma
 
-    header1 = """% Seismica Submission Template
+    header1 = """% Seismica Publication Template
+% LuaLatex
+
+%! TEX TS-program = lualatex
+%! TEX encoding = UTF-8 Unicode
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SCE team metadata:
+\dois{10.0000/issn-issn}
+\\receiveddate{DATE HERE}
+\\accepteddate{DATE HERE}
+\publisheddate{DATE HERE}
+\\theyear{"""+str(datetime.datetime.now().year)+"""}
+\\thevolume{0}
+\\thenumber{0}
+\editorname{the editor}
+\copyedname{the copyeditor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass["""+docops+"""]{seismica} 
 \\title{"""+title+"""}
+\shorttitle{"""+title+"""}
 
 """
     fout.write(header1)
