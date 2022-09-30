@@ -1,6 +1,7 @@
 import numpy as np
 import biblib.bib as bbl
 from argparse import ArgumentParser
+from collections import Counter
 import os, sys, re
 
 parser = ArgumentParser()
@@ -26,6 +27,21 @@ parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 
 # get entries
 bib_OD = parsed.get_entries()  # returns collections.OrderedDict
+
+# check if all the titles end with an apostrophe; if so, probably an error and they need to 
+# be removed (probably quoted titles and anystyle only removed the leading quote)
+last_char = np.array([bib_OD[key]['title'][-1] for key in bib_OD])
+strp_last = False
+lc = Counter(last_char)
+if max(lc.values()) >= len(last_char)/2:  # this is a red flag
+    print('title trailing characters:')
+    for i,k in enumerate(lc.keys()):
+        print('[%i] %i instances of %s' % (i,lc[k],k))
+    irem = int(input('enter index to remove: ') or -1)
+    if irem >= 0: 
+        strp_last = True  # and we'll remove the one with that index in the keys list
+        char_out = list(lc.keys())[irem]
+
 
 # open outfile for writing
 fout = open(out_bib,'w')  # will overwrite if file exists
@@ -54,6 +70,10 @@ for key in bib_OD:
         entry['note'] = re.sub(r'Available at','',entry['note'])
         if len(entry['note']) <= 3:  # if we've only got 3 characters left or less, probably nothing
             _ = entry.pop('note')  # should take care of case with : at the end
+
+    if strp_last:
+        if entry['title'].endswith(char_out):
+            entry['title'] = entry['title'][:-1]  # remove trailing apostrophe (probably)
 
     # for each, reformat key to be what we'd look for in inline citations
     # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
