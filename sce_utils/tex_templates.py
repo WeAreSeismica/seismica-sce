@@ -21,6 +21,8 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 %! TEX TS-program = lualatex
 %! TEX encoding = UTF-8 Unicode
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% options: report, breakmath, proof, onecolumn, invited
+\documentclass["""+docops+"""]{seismica} 
 
 % SCE team metadata:
 \dois{10.0000/issn-issn}
@@ -34,7 +36,6 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 \copyedname{the copyeditor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\documentclass["""+docops+"""]{seismica} 
 \\title{"""+title+"""}
 \shorttitle{"""+title+"""}
 
