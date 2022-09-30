@@ -1,7 +1,7 @@
 import numpy as np
 import biblib.bib as bbl
 from argparse import ArgumentParser
-import os, sys
+import os, sys, re
 
 parser = ArgumentParser()
 parser.add_argument('--ifile','-i',type=str,help='path to input file')
@@ -49,6 +49,11 @@ for key in bib_OD:
         _ = entry.pop('url')
 #    if 'pages' in entry.keys():
 #        _ = entry.pop('pages')
+
+    if 'note' in entry.keys():
+        entry['note'] = re.sub(r'Available at','',entry['note'])
+        if len(entry['note']) <= 3:  # if we've only got 3 characters left or less, probably nothing
+            _ = entry.pop('note')  # should take care of case with : at the end
 
     # for each, reformat key to be what we'd look for in inline citations
     # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
