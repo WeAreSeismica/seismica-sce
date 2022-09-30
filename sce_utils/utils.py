@@ -85,8 +85,9 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         nequ += 1  # increment the equation counter
 
     elif ieq.lower() == 'f':
-        ftex_out.write('\\begin{figure}\n')
-        ftex_out.write('\includegraphics[width = \columnwidth]{figure%i}\n' % nfig)
+        ftex_out.write('\\begin{figure*}[ht!]\n')
+        ftex_out.write('\centering\n')
+        ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
         ftex_out.write('\caption{placeholder caption}\n')
         ftex_out.write('\label{fig%i}\n' % nfig)
         ftex_out.write('\end{figure}\n')
