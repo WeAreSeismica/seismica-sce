@@ -295,11 +295,12 @@ while not goto_end:
                     ut.parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab)
 
         elif line.startswith('\includegraphics'):
-            ftex_out.write('\\begin{figure}\n')
-            ftex_out.write('\includegraphics[width = \columnwidth]{example-image}\n')
+            ftex_out.write('\\begin{figure*}[ht!]\n')
+            ftex_out.write('\centering\n')
+            ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
             ftex_out.write('\caption{placeholder caption}\n')
             ftex_out.write('\label{fig%i}\n' % nfig)
-            ftex_out.write('\end{figure}\n')
+            ftex_out.write('\end{figure*}\n')
             print('figure found; moving original line to junk file')
             fjunk.write('Figure %i\n' % nfig)
             fjunk.write(line)
@@ -324,13 +325,13 @@ while not goto_end:
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
-                            test = ut.check_non_ascii(test)
+                            #test = ut.check_non_ascii(test)
                         figcap[tag] = test
                     elif to_write.startswith('\\textbf{Table'):
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
-                            test = ut.check_non_ascii(test)
+                            #test = ut.check_non_ascii(test)
                         tabcap[tag] = test
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
@@ -353,7 +354,7 @@ beg_doc = False
 while True:
     line = ftex_in.readline()
     if line.startswith('\\begin{document}'): beg_doc = True
-    if line.startswith('\\begin{figure}'):
+    if line.startswith('\\begin{figure'):
         temp = [line]
         while True:
             line = ftex_in.readline()
@@ -389,10 +390,11 @@ while True:
         ftex_out.write(line)
         break
     else:
-        # assuming captions, names, affils are mostly ok, check for non-ascii characters
-        # that will need to be fixed to render properly in tex
+        # check for non-ascii characters
+        # that will need to be fixed to render properly in pdftex
         if beg_doc:
-            line = ut.check_non_ascii(line)
+            #line = ut.check_non_ascii(line)
+            pass
         ftex_out.write(line)
         
 ftex_in.close()

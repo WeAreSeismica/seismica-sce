@@ -90,7 +90,7 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
         ftex_out.write('\caption{placeholder caption}\n')
         ftex_out.write('\label{fig%i}\n' % nfig)
-        ftex_out.write('\end{figure}\n')
+        ftex_out.write('\end{figure*}\n')
         print('moving this environment to junk file; sort it out manually\n')
         fjunk.write('Figure %i\n' % nfig)
         for k in temp:
