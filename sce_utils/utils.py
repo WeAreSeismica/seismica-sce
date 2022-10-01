@@ -1,5 +1,6 @@
 import numpy as np
 from re import finditer, findall
+import re
 import os, sys
 
 ####
@@ -129,7 +130,6 @@ def check_for_fig_tab_eqn_refs(to_write):
     """
     check a line for 'Figure 1' or 'Equation 9' or whatever, replace those with linked refs
     """
-
     capital_names = ['Figure ','Equation ','Table ','Fig. ','Eq. ','Figures ','Tables ','Figs. ']
     plurals = ['Figures ','Tables ','Figs. ']
     ref_names = ['fig','eq','tbl','fig','eq','fig','tbl','fig']
@@ -174,6 +174,36 @@ def check_for_fig_tab_eqn_refs(to_write):
                         word_out = word
                     to_write = line_start + word_out + '\\ref{%s%i}' % (ref_names[iw],fig_num) + \
                                 line_end  # replace space with non-breaking space ~
+
+    return to_write
+
+
+def non_breaking_space(to_write):
+    """
+    look for places where we have a figure/table/equation ref, and try to replace leading space
+    with ~ so it's non-breaking
+    """
+
+    word = '\\ref{'
+    if word in to_write:
+        nrefs = len([m.start() for m in finditer(re.escape(word),to_write)]) # find indices for \ref{
+        # for each such index, look get the start and look before it
+        for ireplace in range(nrefs):
+            inds = np.array([m.start() for m in finditer(re.escape(word),to_write)])
+            iref = inds[ireplace]
+            if to_write[iref-1] == ' ':  # split here and replace
+                iref = iref - 1
+            elif to_write[iref-1] == '}':  # might be one of those plurals
+                if to_write[iref-2] == ' ':
+                    # split at iref-1
+                    iref = iref - 2
+            else:
+                iref = -999  # who knows what's going on here
+
+            if iref != -999:
+                line_start = to_write[:iref]
+                line_end = to_write[iref+1:]
+                to_write = line_start + '~' + line_end  # easy peasy
 
     return to_write
 

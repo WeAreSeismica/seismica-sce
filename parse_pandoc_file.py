@@ -314,6 +314,9 @@ while not goto_end:
             # rescan line and look for figure/equation references to link
             to_write = ut.check_for_fig_tab_eqn_refs(to_write)
 
+            # rescan again to replace spaces for reference links with ~ (non-breaking)
+            to_write = ut.non_breaking_space(to_write)
+
             # a few last checks for special cases:
             if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'): # likely a caption
                 print('\t'+to_write[:40])
@@ -325,13 +328,11 @@ while not goto_end:
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
-                            #test = ut.check_non_ascii(test)
                         figcap[tag] = test
                     elif to_write.startswith('\\textbf{Table'):
                         test = to_write.split(tag)[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
-                            #test = ut.check_non_ascii(test)
                         tabcap[tag] = test
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
@@ -390,11 +391,6 @@ while True:
         ftex_out.write(line)
         break
     else:
-        # check for non-ascii characters
-        # that will need to be fixed to render properly in pdftex
-        if beg_doc:
-            #line = ut.check_non_ascii(line)
-            pass
         ftex_out.write(line)
         
 ftex_in.close()
