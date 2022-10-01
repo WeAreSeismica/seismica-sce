@@ -24,6 +24,13 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 % options: report, breakmath, proof, onecolumn, invited
 \documentclass["""+docops+"""]{seismica} 
 
+% if a report, specify report type:
+%\\reportheader{Fast Report}
+%\\reportheader{Null Results Report}
+%\\reportheader{Software Report}
+%\\reportheader{Instrument Deployment Report}
+%\\reportheader{Field Campaign Report}
+
 % SCE team metadata:
 \dois{10.0000/issn-issn}
 \\receiveddate{DATE HERE}
