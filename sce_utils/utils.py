@@ -130,8 +130,9 @@ def check_for_fig_tab_eqn_refs(to_write):
     check a line for 'Figure 1' or 'Equation 9' or whatever, replace those with linked refs
     """
 
-    capital_names = ['Figure ','Equation ','Table ','Fig. ','Eq. ']
-    ref_names = ['fig','eq','tbl','fig','eq']
+    capital_names = ['Figure ','Equation ','Table ','Fig. ','Eq. ','Figures ','Tables ','Figs. ']
+    plurals = ['Figures ','Tables ','Figs. ']
+    ref_names = ['fig','eq','tbl','fig','eq','fig','tbl','fig']
 
     for iw, word in enumerate(capital_names):
         if word in to_write:
@@ -167,7 +168,12 @@ def check_for_fig_tab_eqn_refs(to_write):
                         line_end = to_write[ifig+shift+2:]
                     else:
                         line_end = to_write[ifig+shift+1:]
-                    to_write = line_start + word + '\\ref{%s%i}' % (ref_names[iw],fig_num) + line_end
+                    if word in plurals:   # mark plurals because we won't have caught the second number
+                        word_out = '\\textcolor{red}{%s}' % word
+                    else:
+                        word_out = word
+                    to_write = line_start + word_out + '\\ref{%s%i}' % (ref_names[iw],fig_num) + \
+                                line_end  # replace space with non-breaking space ~
 
     return to_write
 
@@ -179,6 +185,8 @@ def check_non_ascii(line):
     """
     go through a line and either highlight non-ascii characters in red or replace them from 
     a pre-set list
+
+    not currently used, since we are compiling lualatex with UTF-8 encoding :)
     """
     ibad = []
     what = []
