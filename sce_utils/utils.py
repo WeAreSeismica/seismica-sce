@@ -387,7 +387,10 @@ def _parse_paren(paren, pretext, bibkeys):
         else:  # Alpha (YYYY) or Alpha and Beta (YYYY)
             test_cite = ''.join([prev,paren[0][:4]])  # try just one name first
             is_badref,is_abamb = _test_test_cite(test_cite, bibkeys)
-            if is_badref:
+            if not is_badref and not is_abamb:
+                citations.append(test_cite + 'a')
+                pretext = ' '.join(pretext.split(' ')[:-2]) + ' '
+            elif is_badref:
                 prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
                 test_cite = ''.join([prevprev,prev,paren[0][:4]])
                 is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
