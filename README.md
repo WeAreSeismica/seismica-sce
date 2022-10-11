@@ -25,7 +25,8 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - authors are all on one line and affiliations are right after authors, one affiliation per line
     - references or bibliography is the last section of the document
     - author contributions are given as CRediT statements at the beginning, and there is no separate Author Contributions Statement elsewhere
-    - template formatting is generally intact
+    - captions must be below the figures and tables they pertain to
+    - template formatting is generally intact (if you run into trouble later, this is probably the reason)
 
 - convert article file to latex
     - docx: `pandoc file.docx -f docx -t latex --wrap=none -s -o file_pandoc.tex`
@@ -46,12 +47,12 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - `temp.tex` is used for intermediate stages of parsing
 
 - make pdf by either:
-    - compiling in overleaf with the submission template (recommended), OR:
-    - run bibtex and pdflatex locally
-        - `pdflatex tex_out.tex` -> `tex_out.pdf`
+    - compiling in overleaf with the publication template (recommended), OR:
+    - run bibtex and lualatex locally
+        - `lualatex tex_out.tex` -> `tex_out.pdf`
         - `bibtex tex_out.aux`
-        - `pdflatex tex_out.tex`
-        - `pdflatex tex_out.tex`
+        - `lualatex tex_out.tex`
+        - `lualatex tex_out.tex`
             - running at least twice gives inline references a chance to sort themselves out
 
 - manually set options (breakmath, languages, etc) as necessary
@@ -63,12 +64,11 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 - look at junk file and manually reformat/place tables in text where they belong
 
 ## TODO: 
+- multi-line equations in brackets/parens! These are a problem, they break the paren parsing.
 - print warning for references that start with special characters
-- add more to non-ascii checking dict, current set is not exhaustive (and maybe there's a better way to get these than adding them by hand
-- figure out longtable/table parsing so we don't need to move things to junk
-- check for excess . at the beginnings of captions when bold formatting isn't perfect
-- can we catch captions even when "Figure 1"/"Table 1" is *not* bold?
-- there's some problem with citations that are Author (yyyy), fix that
+- figure out longtable/table parsing to seistable so we don't need to move things to junk
+- check for excess . at the beginnings of captions when bold formatting isn't perfect, and strip trailing newlines from captions (for tex2jats)
+- can we catch captions even when "Figure 1"/"Table 1" is *not* bold? They should be bold but are not always
 - check YYYYa/YYYYb citations
 - make a docker instance so it's easier for people to run this whole thing
 - (incorporate relevant parts of biblib)
