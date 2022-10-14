@@ -39,8 +39,9 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 \\theyear{"""+str(datetime.datetime.now().year)+"""}
 \\thevolume{0}
 \\thenumber{0}
-\editorname{the editor}
-\copyedname{the copyeditor}
+\prodedname{the production editor}
+\handedname{the handling editor}
+\copyedname{the copy/layout editor}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \\title{"""+title+"""}
