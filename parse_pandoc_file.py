@@ -322,7 +322,7 @@ while not goto_end:
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
-                    cap = to_write.split('\\ref{')[1]
+                    cap = to_write.split('\\ref{')[1].rstrip()  # no trailing \n
                     tag = cap.split('}')[0]
                     if to_write.startswith('\\textbf{Figure'):
                         test = to_write.split(tag)[1][2:].lstrip()
