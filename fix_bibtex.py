@@ -66,6 +66,10 @@ for key in bib_OD:
 #    if 'pages' in entry.keys():
 #        _ = entry.pop('pages')
 
+    if 'doi' in entry.keys():  # check if doi ends with . and if it does, get rid of the .
+        if entry['doi'][-1] == '.':
+            entry['doi'] = entry['doi'][:-1]
+
     if 'note' in entry.keys():
         entry['note'] = re.sub(r'Available at','',entry['note'])
         if len(entry['note']) <= 3:  # if we've only got 3 characters left or less, probably nothing
