@@ -88,12 +88,13 @@ for key in bib_OD:
     elif len(entry.authors()) == 1:
         newkey = entry.authors()[0].last + entry['year']
     newkey = newkey.replace(" ","")  # get rid of spaces if there are any (like van Keken or something)
+    newkey = newkey.replace("-","")  # get rid of hyphens, which tex2jats doesn't like
     nextletter = 'a'
     if newkey + nextletter in newkey_list:  # already have 'a', try the next letter
         thisauthor = [e for e in newkey_list if e.startswith(newkey)]
         alphabet = [e[-1] for e in thisauthor]
         nextletter = chr(ord(alphabet[-1]) + 1)
-    newkey= newkey + nextletter  # this is what we'll use for bibtex
+    newkey = newkey + nextletter  # this is what we'll use for bibtex
 
 #   if len(newkey) != len(newkey.encode()):
 #       print('key ascii error: ',newkey)  # non-ascii is fine within citations, just not in keys
