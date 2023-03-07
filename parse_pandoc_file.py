@@ -174,7 +174,8 @@ while True:
         for k in authors.keys():
             if authors[k]['name'] == line.split(':')[0]:
                 authors[k]['orcid'] = line.split(':')[1].lstrip().rstrip()
-
+# TODO: author names full, orcid list has first initials only - try by A. Name if not matched initially
+# NOTE could this be a regex thing? maybe, maybe not
 
 # parse CRediT section, make a dict for that
 ftex_in.seek(0)
@@ -318,7 +319,7 @@ while not goto_end:
             to_write = ut.non_breaking_space(to_write)
 
             # a few last checks for special cases:
-            if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'): # likely a caption
+            if to_write.lstrip().startswith('\\textbf{Figure') or to_write.lstrip().startswith('\\textbf{Table'): # likely a caption
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here

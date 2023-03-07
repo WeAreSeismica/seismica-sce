@@ -41,7 +41,7 @@ def document_structure(ftex_in):
                     'line': i}
             struct['b'] = sect
         elif line.startswith('\\title{'):
-            sect = {'sname':line.split('{')[-1].split('}')[0],\
+            sect = {'sname':line.split('\\title{')[-1].rstrip('}\n'),\
                     'level':-1,\
                     'line':i}
             struct['ti'] = sect

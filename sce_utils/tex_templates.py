@@ -82,7 +82,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
         header2 = header2[:-1]
         header2 += """}\n
 %\\newfontfamily\thaifont[Script=Thai]{Noto Serif Thai}
-header2 += '%% also see https://www.overleaf.com/latex/examples/how-to-write-multilingual-text-with-different-scripts-in-latex/wfdxqhcyyjxz for reference
+%% also see https://www.overleaf.com/latex/examples/how-to-write-multilingual-text-with-different-scripts-in-latex/wfdxqhcyyjxz for reference
 
 """
         fout.write(header2)
