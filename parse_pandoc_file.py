@@ -111,14 +111,13 @@ while True:  # read up to where authors start
 authors = {}  # read author names and superscripts for affiliations
 for i,bit in enumerate(line.split('}')[:-1]):
     bit2 = bit.split('\\textsuperscript{')
-    if bit2[0].startswith(','):
-        nm = bit2[0][1:].lstrip()
-        if nm.startswith('and'):
-            nm = nm[3:].lstrip()
-        elif nm.startswith('&'):
-            nm = nm[1:].lstrip()
-    else:
-        nm = bit2[0]
+    nm = bit2[0].lstrip().rstrip()
+    if nm.startswith(','):
+        nm = nm[1:].lstrip().rstrip()
+    if nm.startswith('&'):
+        nm = nm[1:].lstrip()
+    if nm.startswith('and'):
+        nm = nm[3:].lstrip()
     sp = bit2[1]
     authors[i] = {'name':nm.lstrip().rstrip(),'supers':sp}
 
@@ -171,11 +170,13 @@ while True:
         if line.startswith('\hypertarget') or line.startswith('\section'):
             break
         # figure out who the author is, locate in author dict
+        orcid_claimed = False
         for k in authors.keys():
-            if authors[k]['name'] == line.split(':')[0]:
+            if ut.author_aliases(line.split(':')[0],authors[k]['name']):
                 authors[k]['orcid'] = line.split(':')[1].lstrip().rstrip()
-# TODO: author names full, orcid list has first initials only - try by A. Name if not matched initially
-# NOTE could this be a regex thing? maybe, maybe not
+                orcid_claimed = True
+        if not orcid_claimed:
+            print('orcid ',line.split(':'),' not matched to author list')
 
 # parse CRediT section, make a dict for that
 ftex_in.seek(0)
