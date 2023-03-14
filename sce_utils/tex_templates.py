@@ -53,7 +53,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     # parse authors and affiliations
     for k in authors.keys():
         auth = authors[k]
-        towrite = '\\author['+auth['supers']+']{'+auth['name']
+        towrite = '\\author['+auth['supers']+']{'+auth['name'].replace(' ','~')
         if 'orcid' in auth.keys():
             towrite += '\n\orcid{'+auth['orcid']+'}'
         if 'corresp' in auth.keys():
