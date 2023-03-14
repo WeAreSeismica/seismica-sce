@@ -208,6 +208,35 @@ def non_breaking_space(to_write):
     return to_write
 
 
+def author_aliases(orcid_name,author_name):
+    """
+    check if a name listed for an orcid is the same as a name from the author list
+    if the orcid name is initials and the author name is not, reduce author name to initials
+    we are implicitly assuming that authors will not fill in orcids using initials if there
+        are co-authors with identical initials
+    """
+    match = False  # assume the names do not match to start with
+
+    # naive check if the two match
+    if author_name == orcid_name:
+        match = True
+
+    # if they don't, check if orcid_name is abbreviated at all
+    else:
+        orcid_given = orcid_name.split(' ')[0]
+        orcid_last = orcid_name.split(' ')[-1]
+        if re.match(r'[A-Z]\.',orcid_given):  # given name is abbreviated, at least
+            # get initials from author_name and compare sans .s
+            orcid_init = ''.join(c for c in orcid_name if c.isupper())
+            author_bits = author_name.split(' ')
+            author_init = ''.join(c[0] for c in author_bits)  # hopefully this works even for
+                                    # names like McDonald etc
+                                    # NOTE might fail for van den Something
+            if orcid_init == author_init:
+                match = True
+    return match
+
+
 nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$',\
             'ö':'ö','é':'é','é':'é','ć':'ć'}
 
