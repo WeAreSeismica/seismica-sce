@@ -13,7 +13,7 @@ You will also need to have [pandoc](pandoc.org/) installed for the initial conve
 
 A local installation of the anystyle gem is recommended but not required as long as the web-hosted [anystyle.io](anystyle.io) exists. On a linux machine, this can be obtained by running: `sudo apt install ruby-dev` followed by `sudo gem install anystyle=cli`
 
-Compiling the output tex file from this set of scripts into a pdf requires the Seismica submission tex template.
+Compiling the output tex file from this set of scripts into a pdf requires the Seismica publication tex template, which is not publicly available. However, it should be able to compile with the Seismica submission tex template if you comment out a few of the macros at the top of the output tex file.
 
 
 ## general steps for the conversion process
