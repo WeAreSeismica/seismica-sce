@@ -275,7 +275,7 @@ while not goto_end:
     else:  # not a section header, so parse as a line and deal with citations or math or whatever
         if line.startswith('\(') or line.startswith('\['):  # possibly an equation
             print(line[:-1])
-            iq = input('is this an equation? [y]/n') or 'y'
+            iq = input('is this an equation? [y]/n: ') or 'y'
             sw = line[:2]
             if sw[1] == '(': ew = '\)'
             if sw[1] == '[': ew = '\]'
@@ -322,7 +322,7 @@ while not goto_end:
             # a few last checks for special cases:
             if to_write.lstrip().startswith('\\textbf{Figure') or to_write.lstrip().startswith('\\textbf{Table'): # likely a caption
                 print('\t'+to_write[:40])
-                iq = input('Is this a caption? [y]/n') or 'y'
+                iq = input('Is this a caption? [y]/n: ') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
                     cap = to_write.split('\\ref{')[1].rstrip()  # no trailing \n
                     tag = cap.split('}')[0]
@@ -368,7 +368,8 @@ while True:
                 break
 
         for t in temp:
-            if t.startswith('\caption'):
+            print(figcap)
+            if t.startswith('\caption') and tag in figcap:
                 ftex_out.write('\caption{%s}\n' % figcap[tag])
             else:
                 ftex_out.write(t)
@@ -384,7 +385,7 @@ while True:
                 break
 
         for t in temp:
-            if t.startswith('\caption'):
+            if t.startswith('\caption') and tag in tabcap:
                 ftex_out.write('\caption{%s}\n' % tabcap[tag])
             else:
                 ftex_out.write(t)
