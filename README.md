@@ -10,7 +10,7 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 A [conda](conda.io) environment is a nice way to set this up. Alternatively, you can use [docker](docker.com), with instructions provided below.
 
 ### manual setup
-You will also need to have [pandoc](pandoc.org/) installed for the initial conversion of the .docx file.
+You will need to have [pandoc](pandoc.org/) installed for the initial conversion of the .docx file.
 
 A local installation of the anystyle gem is recommended but not required as long as the web-hosted [anystyle.io](anystyle.io) exists. On a linux machine, this can be obtained by running: `sudo apt install ruby-dev` followed by `sudo gem install anystyle-cli`
 
@@ -25,7 +25,7 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     docker-compose run --build -it docx-converter
     ```
 1. This will open a terminal session with all the necessary dependencies already installed. You can follow the remaining intructions in this terminal.
-1. After completing te conversions, `exit` this terminal session and run the following to turn down the docker service - 
+1. After completing the conversions, `exit` this terminal session and run the following to turn down the docker service - 
     ```
     docker-compose down
     ```
@@ -57,7 +57,7 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
     - any non-ascii keys will be printed to stdout with option to correct while running script
 
 1. parse the pandoc output tex file to a better tex format
-    - `python3 -m parse_pandoc_file --bibfile refs.bib --ifile file_pandoc.tex --ofile file_pandoc_better.tex`
+    - `python3 -m parse_pandoc_file --bibfile refs_better.bib --ifile file_pandoc.tex --ofile file_pandoc_better.tex`
     - unparsed tables etc will go in `junk.tex`
     - `temp.tex` is used for intermediate stages of parsing
 
@@ -86,5 +86,4 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 - check for excess . at the beginnings of captions when bold formatting isn't perfect, and strip trailing newlines from captions (for tex2jats)
 - can we catch captions even when "Figure 1"/"Table 1" is *not* bold? They should be bold but are not always
 - check YYYYa/YYYYb citations
-- make a docker instance so it's easier for people to run this whole thing
 - (incorporate relevant parts of biblib)
