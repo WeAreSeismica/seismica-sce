@@ -51,9 +51,11 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout.write(header1)
 
     # parse authors and affiliations
-    for k in authors.keys():
+    for ik,k in enumerate(authors.keys()):
         auth = authors[k]
-        towrite = '\\author['+auth['supers']+']{'+auth['name'].replace(' ','~')
+        towrite = '\\author['+auth['supers']+']{'+auth['name']
+        if ik > 0:
+            towrite = towrite.replace(' ','~')
         if 'orcid' in auth.keys():
             towrite += '\n\orcid{'+auth['orcid']+'}'
         if 'corresp' in auth.keys():

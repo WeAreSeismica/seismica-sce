@@ -368,7 +368,7 @@ while True:
                 break
 
         for t in temp:
-            print(figcap)
+            #print(figcap)
             if t.startswith('\caption') and tag in figcap:
                 ftex_out.write('\caption{%s}\n' % figcap[tag])
             else:
