@@ -292,7 +292,7 @@ def get_abstract(ftex_in):
                 abs2 = abs2 + line.rstrip()
             else:
                 break 
-        abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
+        #abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
         abs2_dict['text'] = abs2
 
     return ftex_in, line, abs2_dict
