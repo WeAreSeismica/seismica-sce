@@ -20,6 +20,6 @@ RUN python3 -m pip install pip --upgrade --no-cache \
 	pip \
 	setuptools \
 	numpy \
-	git+https://github.com/abhineetgupta/biblib
+	git+https://github.com/WeAreSeismica/biblib
 
 WORKDIR /data

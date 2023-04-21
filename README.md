@@ -5,7 +5,7 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 ## dependencies:
 - python 3.n (preferably 3.8+)
 - numpy
-- [biblib](https://github.com/aclements/biblib)
+- [biblib](https://github.com/WeAreSeismica/biblib)
 
 A [conda](conda.io) environment is a nice way to set this up. Alternatively, you can use [docker](docker.com), with instructions provided below.
 
@@ -14,7 +14,7 @@ You will need to have [pandoc](pandoc.org/) installed for the initial conversion
 
 A local installation of the anystyle gem is recommended but not required as long as the web-hosted [anystyle.io](anystyle.io) exists. On a linux machine, this can be obtained by running: `sudo apt install ruby-dev` followed by `sudo gem install anystyle-cli`
 
-Note that biblib is not available through conda or pip (the one available from pip is not the same module), though it can be installed in a conda env by using pip with the downloaded source code. A future version of these scripts may build in relevant parts of biblib since it's under an MIT license and that would remove the dependency on one person's github-hosted project.
+Note that biblib is not available through conda or pip (the one available from pip is not the same module), though it can be installed in a conda env by using pip with the downloaded source code. We use a fork of the original source code that has been updated for compatibility with Python 3.10+.
 
 Compiling the output tex file from this set of scripts into a pdf requires the Seismica publication tex template, which is not publicly available. However, it should be able to compile with the Seismica submission tex template if you comment out a few of the macros at the top of the output tex file.
 
@@ -86,4 +86,3 @@ Compiling the output tex file from this set of scripts into a pdf requires the S
 - check for excess . at the beginnings of captions when bold formatting isn't perfect, and strip trailing newlines from captions (for tex2jats)
 - can we catch captions even when "Figure 1"/"Table 1" is *not* bold? They should be bold but are not always
 - check YYYYa/YYYYb citations
-- (incorporate relevant parts of biblib)
