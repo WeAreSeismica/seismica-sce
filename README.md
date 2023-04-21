@@ -7,7 +7,15 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 - numpy
 - [biblib](https://github.com/WeAreSeismica/biblib)
 
-A [conda](conda.io) environment is a nice way to set this up. Alternatively, you can use [docker](docker.com), with instructions provided below.
+A [conda](conda.io) environment is a nice way to set this up. You could, for example, use these commands:
+
+`conda create -n seismica numpy`
+`cd /path/to/put/biblib/files`
+`git clone git@github.com:WeAreSeismica/biblib.git`
+`conda activate seismica`
+`pip install /path/to/put/biblib/files/biblib`
+
+Alternatively, you can use [docker](docker.com), with instructions provided below.
 
 ### manual setup
 You will need to have [pandoc](pandoc.org/) installed for the initial conversion of the .docx file.
