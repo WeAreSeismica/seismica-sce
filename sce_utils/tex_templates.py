@@ -42,6 +42,8 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 \prodedname{the production editor}
 \handedname{the handling editor}
 \copyedname{the copy/layout editor}
+%\\reviewername{signed reviewer(s)}
+%\\translatorname{translator(s)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \\title{"""+title+"""}
