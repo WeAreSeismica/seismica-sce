@@ -356,6 +356,16 @@ def parse_parentheticals(line,bibkeys):
         return line
 
     # if there are parentheticals, move on to process them
+    # first check for parens in parens and try to fix them
+    open_del = []; clse_del = []
+    for k in range(1,len(open_par)):
+        if open_par[k] < clse_par[k-1]:
+            open_del.append(k)
+            clse_del.append(k-1)
+    open_par = np.delete(open_par,open_del)
+    clse_par = np.delete(clse_par,clse_del)
+
+    # process what's left ->
     for k in range(len(open_par)):
         # separate out the parenthetical and the text between this and the previous parenthetical
         paren = line[open_par[k]+1:clse_par[k]]
@@ -365,17 +375,19 @@ def parse_parentheticals(line,bibkeys):
             pretext = line[clse_par[k-1]+1:open_par[k]]  # the last bit of text before this parenthetical
 
         # check if this is inline math
-        if pretext[-1] == '\\':
+        if pretext != '' and pretext[-1] == '\\':
+        #if pretext[-1] == '\\':
             to_write += pretext
             to_write += line[open_par[k]:clse_par[k]+1]
-            break
+            #break
 
-        # if not math, continue to parse:
-        parsed, pretext = _parse_paren(paren,pretext,bibkeys)
+        else:
+            # if not math, continue to parse:
+            parsed, pretext = _parse_paren(paren,pretext,bibkeys)
 
-        # add the parsed stuff (pre-paren text may be altered for (YYYY) citations)
-        to_write += pretext
-        to_write += parsed
+            # add the parsed stuff (pre-paren text may be altered for (YYYY) citations)
+            to_write += pretext
+            to_write += parsed
 
         if k == len(open_par) - 1:
             to_write += line[clse_par[-1]+1:]
@@ -393,6 +405,11 @@ def _parse_paren(paren, pretext, bibkeys):
     is_abamb = False     # more than one paper by this author set for this year; resolve manually
     citations = []       # to hold list of bibkeys
     badtext = ''         # for text if only *some* refs are bad
+
+    # check real quick if this is a single number
+    if paren.isdigit():
+        return '('+paren+')', pretext
+    
 
     # split up the parenthetical by spaces -> this will have all punctuation preserved
     paren = paren.split(' ')
