@@ -61,9 +61,9 @@ for key in bib_OD:
                 iy = input('enter corrected year if needed: ') or None
                 if iy != None:
                     entry['year'] = iy
-    if 'url' in entry.keys() and entry.typ != 'misc':
-        _ = entry.pop('url')
-        # TODO: test if url is a doi and there is also a doi, remove duplicates
+    if 'url' in entry.keys():
+        if re.search(r"doi\.org",entry['url']):  # check if url is just a doi link
+            _ = entry.pop('url')
 #    if 'pages' in entry.keys():
 #        _ = entry.pop('pages')
 
