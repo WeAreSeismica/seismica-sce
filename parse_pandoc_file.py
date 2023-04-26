@@ -300,7 +300,7 @@ while not goto_end:
             ftex_out.write('\\begin{figure*}[ht!]\n')
             ftex_out.write('\centering\n')
             ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
-            ftex_out.write('\caption{placeholder caption}\n')
+            ftex_out.write('\caption{\\textcolor{red}{placeholder caption}}\n')
             ftex_out.write('\label{fig%i}\n' % nfig)
             ftex_out.write('\end{figure*}\n')
             print('figure found; moving original line to junk file')
