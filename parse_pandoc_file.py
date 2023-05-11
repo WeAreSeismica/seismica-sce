@@ -268,7 +268,12 @@ while not goto_end:
         elif lower_section in skip_sections:  # skip everything past "References"
             goto_end = True
         else:
-            sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])  # strip leading number
+            # check if there *is* a leading number
+            lead_num = ' '.join(line.split('{')[1].split('}')[0][0])
+            if lead_num.isdigit():
+                sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])  # strip leading number
+            else:
+                sname = line.split('{')[1].split('}')[0]  # no number, just heading
         if sname != '' and not goto_end:
             ftex_out.write('%s{%s}\n' % (stype,sname))
 
