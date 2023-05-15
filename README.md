@@ -9,8 +9,6 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 - [pandoc](pandoc.org/)
 - [anystyle](https://github.com/inukshuk/anystyle) or a web browser to access [anystyle.io](anystyle.io)
 
-Note that biblib is not available through conda or pip (the one available from pip is not the same module), though it can be installed in a conda env by using pip with the downloaded source code. We use a fork of the original source code that has been updated for compatibility with Python 3.10+.
-
 A [conda](conda.io) environment is a nice way to set up the python dependencies. You could, for example, use these commands:
 
 - `conda create -n seismica numpy`
@@ -18,6 +16,8 @@ A [conda](conda.io) environment is a nice way to set up the python dependencies.
 - `git clone git@github.com:WeAreSeismica/biblib.git`
 - `conda activate seismica`
 - `pip install /path/to/put/biblib/files/biblib`
+
+Note that biblib is not available through conda or pip (the one available from pip is not the same module), though it can be installed in a conda env by using pip with the downloaded source code. We use a fork of the original source code that has been updated for compatibility with Python 3.10+.
 
 To install anystyle locally on a linux machine, run:
 - `sudo apt install ruby-dev`
@@ -58,21 +58,21 @@ Alternatively, you can use [docker](docker.com), with instructions provided belo
     - `python3 -m fix_bibtex --ifile refs.bib --ofile refs_better.bib`
 
 1. parse the pandoc output tex file to a better tex format
-    - `python3 -m parse_pandoc_file --bibfile refs_better.bib --ifile file_pandoc.tex --ofile file_pandoc_better.tex`
+    - `python3 -m parse_pandoc_file --bibfile refs_better.bib --ifile file_pandoc.tex --ofile file_better.tex`
     - unparsed tables and other confusing text will go in `junk.tex`
     - `temp.tex` is used for intermediate stages of parsing
 
 1. make pdf by either:
     - compiling all the `_better` files in overleaf with the publication template (recommended), OR:
     - run bibtex and lualatex locally
-        - `lualatex tex_out.tex` -> `tex_out.pdf`
-        - `bibtex tex_out.aux`
-        - `lualatex tex_out.tex`
-        - `lualatex tex_out.tex`
+        - `lualatex file_better.tex` -> `file_better.pdf`
+        - `bibtex file_better.aux`
+        - `lualatex file_better.tex`
+        - `lualatex file_better.tex`
             - running at least twice gives inline references a chance to sort themselves out
-    - The Seismica publication template is not publicly available. If you are testing out these scripts without it, try using the Seismica submission template (and pdflatex) instead. You will need to comment out some metadata macros in the document preamble - they will throw errors in the submission template.
+    - The Seismica publication template is not publicly available. If you are testing out these scripts without it, try using the [Seismica submission template](https://github.com/WeAreSeismica/submission-template) (and pdflatex) instead. You will need to comment out some metadata macros in the document preamble - they will throw errors in the submission template.
 
-1. complete other tasks to fix the latex files - 
+1. complete other tasks to fix the latex files:
     - manually set options (breakmath, languages, report, etc) as necessary
     - manually link figure files (that the author uploaded separately) at the right sizes (1- or 2-column)
     - manually adjust for any citations that we couldn't parse (most should be marked in red, but some may have been missed altogether)
