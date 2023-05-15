@@ -447,7 +447,7 @@ def _parse_paren(paren, pretext, bibkeys):
     badtext = ''         # for text if only *some* refs are bad
 
     # check real quick if this is a single number
-    if paren.isdigit():
+    if paren.isdigit() and len(paren) != 4:  # and isn't possibly a year
         return '('+paren+')', pretext
     
 
