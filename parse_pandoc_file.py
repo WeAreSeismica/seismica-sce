@@ -321,6 +321,9 @@ while not goto_end:
             # rescan line and look for figure/equation references to link
             to_write = ut.check_for_fig_tab_eqn_refs(to_write)
 
+            # rescan line and look for urls that need wrapping
+            to_write = ut.check_href_make_url(to_write)
+
             # rescan again to replace spaces for reference links with ~ (non-breaking)
             to_write = ut.non_breaking_space(to_write)
 

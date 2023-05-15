@@ -126,6 +126,46 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
 
     return ftex_in, ftex_out, fjunk, nequ, nfig, ntab, ieq
 
+def check_href_make_url(to_write):
+    """
+    check a line for \href{} (and also un-wrapped URLS?) and try to fix them
+    """
+    out_write = ""
+    # check for href and fix if present
+    matches = re.finditer(r'\\href\{(.*?)\}\{(.*?)\}',to_write)
+    info = [(m.start(),m.end(),m.groups()) for m in matches]
+    if len(info) > 0:
+        for i in range(len(info)):
+            if i == 0:
+                out_write += to_write[:info[0][0]]
+            urlwrap = '\\url{' + info[i][2][1] + '}'
+            out_write += urlwrap
+            if i < len(info)-1:
+                out_write += to_write[info[i][1]:info[i+1][0]]
+        out_write += to_write[info[i][1]:]
+    else:
+        out_write = to_write
+
+    # try to find un-wrapped URLs (ie not \url and not \href) and wrap those too
+    matches = re.finditer(r'[^\{]http(.*?)[\) ]',out_write)
+    info = [(m.start(),m.end(),m.groups()) for m in matches]
+    new_write = ""
+    if len(info) > 0:
+        for i in range(len(info)):
+            if i == 0:
+                new_write += out_write[:info[0][0]+1]
+            urlwrap = '\\url{http' + info[i][2][0] + '}'
+            new_write += urlwrap
+            if i < len(info)-1:
+                new_write += out_write[info[i][1]-1:info[i+1][0]+1]
+        new_write += out_write[info[i][1]-1:]
+    else:
+        new_write = out_write
+
+    return new_write
+        
+
+
 def check_for_fig_tab_eqn_refs(to_write):
     """
     check a line for 'Figure 1' or 'Equation 9' or whatever, replace those with linked refs
