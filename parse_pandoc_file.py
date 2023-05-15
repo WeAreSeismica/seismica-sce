@@ -332,18 +332,21 @@ while not goto_end:
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n: ') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
-                    cap = to_write.split('\\ref{')[1].rstrip()  # no trailing \n
+                    cap = '\\ref{'.join(to_write.split('\\ref{')[1:]).rstrip()  # no trailing \n
                     tag = cap.split('}')[0]
-                    if to_write.startswith('\\textbf{Figure'):
-                        test = to_write.split(tag)[1][2:].lstrip()
+                    if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'):
+                        splits = to_write.split(tag)
+                        test = splits[1][2:].lstrip()
                         if test.startswith('}'):
                             test = test[1:].lstrip()
-                        figcap[tag] = test
-                    elif to_write.startswith('\\textbf{Table'):
-                        test = to_write.split(tag)[1][2:].lstrip()
-                        if test.startswith('}'):
-                            test = test[1:].lstrip()
-                        tabcap[tag] = test
+                        if len(splits) > 2:
+                            fullcap = tag.join(np.append(test,splits[2:]))
+                        else:
+                            fullcap = test
+                        if to_write.startswith('\\textbf{Figure'):
+                            figcap[tag] = fullcap
+                        elif to_write.startswith('\\textbf{Table'):
+                            tabcap[tag] = fullcap
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
                 ftex_out.write('\\noindent \n')   # are probably continuing sentences after eqns
