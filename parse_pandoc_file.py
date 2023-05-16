@@ -344,9 +344,9 @@ while not goto_end:
                         else:
                             fullcap = test
                         if to_write.startswith('\\textbf{Figure'):
-                            figcap[tag] = fullcap
+                            figcap[tag] = fullcap.lstrip().rstrip()
                         elif to_write.startswith('\\textbf{Table'):
-                            tabcap[tag] = fullcap
+                            tabcap[tag] = fullcap.lstrip().rstrip()
                     to_write = ''
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
                 ftex_out.write('\\noindent \n')   # are probably continuing sentences after eqns
@@ -385,14 +385,14 @@ while True:
             else:
                 ftex_out.write(t)
 
-    elif line.startswith('\\begin{table}'):
+    elif line.startswith('\\begin{table'):
         temp = [line]
         while True:
             line = ftex_in.readline()
             temp.append(line)
             if line.startswith('\label'):
                 tag = line.split('\label{')[1].split('}')[0]
-            if line.startswith('\end{table}'):  # can't be \end{tabular}
+            if line.startswith('\end{table'):  # can't be \end{tabular}
                 break
 
         for t in temp:
