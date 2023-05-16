@@ -100,17 +100,20 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         nfig += 1
 
     elif ieq.lower() == 't':
-        ftex_out.write('\\begin{table}[h]\n')
-        ftex_out.write('\centering\n')
-        ftex_out.write('\\begin{tabular}{lc}\hline\n')
-        ftex_out.write('\\textbf{Data type} & \\textbf{some numbers} \\\\ \hline \n')
-        ftex_out.write('type 1 & 1 \\\\ \n')
-        ftex_out.write('type 2 & 2 \\\\ \hline \n')
-        ftex_out.write('\end{tabular}\n')
-        ftex_out.write('\caption{placeholder caption}\n')
-        ftex_out.write('\label{tbl%i}\n' % ntab)
-        ftex_out.write('\end{table}\n')
-        print('moving this environment to junk file; sort it out manually\n')
+        #ftex_out.write('\\begin{table}[h]\n')
+        #ftex_out.write('\centering\n')
+        #ftex_out.write('\\begin{tabular}{lc}\hline\n')
+        #ftex_out.write('\\textbf{Data type} & \\textbf{some numbers} \\\\ \hline \n')
+        #ftex_out.write('type 1 & 1 \\\\ \n')
+        #ftex_out.write('type 2 & 2 \\\\ \hline \n')
+        #ftex_out.write('\end{tabular}\n')
+        #ftex_out.write('\caption{placeholder caption}\n')
+        #ftex_out.write('\label{tbl%i}\n' % ntab)
+        #ftex_out.write('\end{table}\n')
+        new_temp = reformat_table(temp,ntab)
+        for k in new_temp:
+            ftex_out.write(k)
+        print('tried to fix table; a copy is in junk if needed\n')
         fjunk.write('Table %i\n' % ntab)
         for k in temp:
             fjunk.write(k)
@@ -125,6 +128,46 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         fjunk.write('\n')
 
     return ftex_in, ftex_out, fjunk, nequ, nfig, ntab, ieq
+
+def reformat_table(temp,ntab):
+    """
+    take one of pandoc's messy table or longtable environments and rework as something
+    nicer that we can actually use
+    includes pre-formatting commands for table style
+    """
+
+    # set up styling and outer table environment
+    pretab = """\\rowcolors{2}{gray!0}{gray!10}
+\\renewcommand{\\arraystretch}{1.2}
+\\begin{table*}[ht]
+\\begin{center}
+\\sflight\\small
+\\arrayrulecolor{gray}\n"""
+
+    good_rows = []  # find the rows that actually have our data in them
+    for line in temp:
+        if '&' in line:    
+            good_rows.append(line)
+
+    ncols = len(good_rows[0].split('&'))  # figure out how many columns we need
+    mspace = 7/ncols  # even spacing, adjust to taste later
+
+    tabstart = '\\begin{tabular}{'
+    for i in range(ncols):
+        tabstart += 'm{%.2fin} ' % mspace
+    tabstart = tabstart[:-1] + '}\n'
+
+    out_tab = pretab + tabstart
+    for l in good_rows:
+        out_tab += l
+    out_tab += """\end{tabular}
+\end{center}
+\caption{placeholder caption}
+\label{tbl%i}
+\end{table*}\n""" % ntab
+
+    return out_tab
+
 
 def check_href_make_url(to_write):
     """
