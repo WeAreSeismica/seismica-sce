@@ -67,6 +67,9 @@ for key in bib_OD:
 #    if 'pages' in entry.keys():
 #        _ = entry.pop('pages')
 
+    if 'pages' in entry.keys():
+        entry['pages'] = entry['pages'].rstrip(',')  # get rid of any trailing commas
+
     if 'doi' in entry.keys():  # check if doi ends with . and if it does, get rid of the .
         if entry['doi'][-1] == '.':
             entry['doi'] = entry['doi'][:-1]
