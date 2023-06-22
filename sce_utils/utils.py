@@ -492,7 +492,9 @@ def _parse_paren(paren, pretext, bibkeys):
     # check real quick if this is a single number
     if paren.isdigit() and len(paren) != 4:  # and isn't possibly a year
         return '('+paren+')', pretext
-    
+
+    # quick cleaning for \emph{et al.} in case someone used an unauthorized ref format
+    paren = re.sub('\\\emph{et al.}','et al.',paren)
 
     # split up the parenthetical by spaces -> this will have all punctuation preserved
     paren = paren.split(' ')
