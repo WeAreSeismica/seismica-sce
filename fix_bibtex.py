@@ -47,6 +47,8 @@ if max(lc.values()) >= len(last_char)/2:  # this is a red flag
 fout = open(out_bib,'w')  # will overwrite if file exists
 
 newkey_list = []  # for tracking keys used in case we need 'a' and 'b'
+n_with_doi = 0
+n_without_doi = 0
 # loop entry keys
 for key in bib_OD:
     entry = bib_OD[key]
@@ -110,8 +112,18 @@ for key in bib_OD:
     newkey_list.append(newkey)
     entry.key = newkey
 
+    # check if doi field is present
+    if 'doi' in entry.keys():
+        n_with_doi += 1
+    else:
+        n_without_doi += 1
+
     # write entry to new bib file
     fout.write(entry.to_bib())
     fout.write('\n')
 
 fout.close()
+
+print('%i items have doi, %i do not have doi' % (n_with_doi, n_without_doi))
+print('%.2f percent lack doi' % (100*n_without_doi/(n_with_doi + n_without_doi)))
+print('if many dois are missing, try searching the plain text reference list with %s' % ("https://apps.crossref.org/SimpleTextQuery"))
