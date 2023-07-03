@@ -1,3 +1,4 @@
+.gitignore
 .DS_Store
 __pycache__/
 .*swp
@@ -18,3 +19,4 @@ empty.png
 *.docx
 *.odt
 paper_test/*
+todo
