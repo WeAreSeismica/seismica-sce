@@ -7,6 +7,14 @@ from collections import Counter
 from urllib.request import Request, urlopen
 import os, sys, re, random, string
 
+####
+# clean up bibtex file produced by anystyle
+    # try to find dois where they are missing
+    # get nice citations from crossref when we do have dois
+    # neaten up bibtex entries, with clean keys for docx/odt parsing
+# TODO option to keep initial keys so we can run this on authors' tex files as well as anystyle
+####
+
 parser = ArgumentParser()
 parser.add_argument('--ifile','-i',type=str,help='path to input file')
 parser.add_argument('--ofile','-o',type=str,help='path to output file')
@@ -33,17 +41,16 @@ parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 # get entries
 bib_OD = parsed.get_entries()  # returns collections.OrderedDict
 
-
-# open outfile for writing
+# open temp outfile for writing
 fout = open('temp.bib','w')  # for doi'd entries, will overwrite if file exists
 
-# loop entry keys
-for key in bib_OD:
+for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
     # TODO if url us a key and doi is not, check if url is actually a doi
     if 'doi' not in entry.keys():  # if no doi, query crossref to try and get one
         q = cr.works(query=entry['title'],query_author=entry['author'],limit=2,select='DOI,title,author')
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
+        # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
         print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
                 q['message']['items'][0]['author'][0],\
                 q['message']['items'][0]['DOI']))
@@ -62,47 +69,40 @@ for key in bib_OD:
             ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
         else:
             ourl = "https://dx.doi.org/"+doi
-        req = Request(ourl, headers=dict(Accept='text/bibliography; style=bibtex'))
+        req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         bibtext = urlopen(req).read().decode('utf-8')
         bibtext = bibtext.lstrip()  # clean leading space
-        # try to make a unique bibtex key bc biblib needs unique keys to read; we'll fix these later
-        key_yr = re.findall('@[a-z]*{([0-9]{4})',bibtext)[0]  # extract auto key (should be year)
-        extra_letters = ''.join(random.choices(string.ascii_letters,k=5))  # random tag
-        pieces = bibtext.split(key_yr)  # split around key (will also split at year entry)
-        start = pieces[0] + extra_letters + key_yr + pieces[1]  # add in new bibtex key
-        new_pieces = [start,]
-        for p in pieces[2:]:
-            new_pieces.append(p)  # put list back together
-        bibtext_out = key_yr.join(new_pieces)  # rejoin around year entry
+        # make sure bibtex key is unique for biblib; we'll fix these later
+        pieces = bibtext.split('\n')
+        key0 = pieces[0].split('{')
+        key0[-1] = key0[-1].rstrip(',') + ''.join(random.choices(string.ascii_letters,k=5)) + ','
+        pieces[0] = '{'.join(key0)
+        bibtext_out = '\n'.join(pieces)
         fout.write(bibtext_out)  # write
+        fout.write('\n')
     else:  # no doi, nothing to search with
         fout.write(entry.to_bib())  # just write what we had to start with
         fout.write('\n')
 
 fout.close()
 
-
 # NOW we reread the temp bib file, which should have all available dois and the best possible
 # citation info, and clean it up to look nicer (esp keys)
-
 parser = bbl.Parser()  # parser for bibtex
 parsed = parser.parse(open('temp.bib','r'))  # parse the input file with biblib
 
 # get entries
 bib_OD = parsed.get_entries()  # returns collections.OrderedDict
 
-
-# open outfile for writing
+# open final outfile for writing
 fout = open(out_bib,'w')  # will overwrite if file exists
 
 newkey_list = []  # for tracking keys used in case we need 'a' and 'b'
 n_with_doi = 0
 n_without_doi = 0
-# loop entry keys
-for key in bib_OD:
+for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
-
-    # for each, make 'year' and fill with year from 'date'
+    # for each, if 'date' is a key, make 'year' based on 'date'
     if 'date' in entry.keys():
         if len(entry['date']) == 4: # assume this means it's a year, which is probably true
             entry['year'] = entry['date']
@@ -131,6 +131,12 @@ for key in bib_OD:
 
     if entry['title'].endswith("'"):
         entry['title'] = entry['title'][:-1]  # remove trailing apostrophe if present
+
+    if 'author' not in entry.keys():
+        entry['author'] = entry['editor']  # TODO catch other cases??
+        parser = bbl.Parser()  # need to re-parse to get field_pos right in Entry
+        parsed = parser.parse(entry.to_bib())
+        entry = parsed.get_entries()[key]
 
     # clean up first author name: no {}, no spaces
     auth0 = re.sub(r'[ ]',r'',entry.authors()[0].last.lstrip('{').rstrip('}'))
