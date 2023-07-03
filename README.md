@@ -5,13 +5,15 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 ## dependencies:
 - python 3.n (preferably 3.8+)
 - numpy
+- [habanero](https://habanero.readthedocs.io/)
+- [dateutil](https://dateutil.readthedocs.io/en/stable/)
 - [biblib](https://github.com/WeAreSeismica/biblib) (NOT from conda or pip)
 - [pandoc](pandoc.org/)
 - [anystyle](https://github.com/inukshuk/anystyle) or a web browser to access [anystyle.io](anystyle.io)
 
 A [conda](conda.io) environment is a nice way to set up the python dependencies. You could, for example, use these commands:
 
-- `conda create -n seismica numpy`
+- `conda create -n seismica numpy habanero python-dateutil`
 - `cd /path/to/put/biblib/files`
 - `git clone git@github.com:WeAreSeismica/biblib.git`
 - `conda activate seismica`
