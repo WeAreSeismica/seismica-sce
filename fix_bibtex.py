@@ -12,7 +12,6 @@ import os, sys, re, random, string
     # try to find dois where they are missing
     # get nice citations from crossref when we do have dois
     # neaten up bibtex entries, with clean keys for docx/odt parsing
-# TODO why are keys being lower-cased??
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
 ####
 
@@ -89,7 +88,7 @@ for key in bib_OD:  # loop entry keys
             # parse to an Entry and check to make sure all the pieces are there
             parser = bbl.Parser()
             parsed = parser.parse(bibtext)
-            entry_new = parsed.get_entries()[key0.lower()]
+            entry_new = parsed.get_entries()[key0]
             rereparse = False
             if 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
                 entry_new['author'] = entry['author']
@@ -100,7 +99,7 @@ for key in bib_OD:  # loop entry keys
             if rereparse:  # info has been added, re-parse to reset field_pos
                 parser = bbl.Parser()
                 parsed = parser.parse(entry_new.to_bib())
-                entry_new = parsed.get_entries()[key0.lower()]
+                entry_new = parsed.get_entries()[key0]
         except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
             entry_new = entry  # keep whatever the initial entry was
                         
