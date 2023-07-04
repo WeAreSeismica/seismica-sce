@@ -48,10 +48,23 @@ fout = open('temp.bib','w')  # for doi'd entries, will overwrite if file exists
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
     # TODO if url us a key and doi is not, check if url is actually a doi
-    searched_doi = False
-    if 'doi' not in entry.keys():  # if no doi, query crossref to try and get one
-        searched_doi = True  # flag to say that we are trying a crossref query for this one
-        q = cr.works(query=entry['title'],query_author=entry['author'],limit=2,select='DOI,title,author')
+    doi = None   # to start
+    if 'doi' in entry.keys(): # get provided doi, check to make sure it will work
+        if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
+            entry['doi'] = entry['doi'][:-1]
+        doi = entry['doi']
+        if '. ' in doi:
+            ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
+        else:
+            ourl = "https://dx.doi.org/"+doi
+        req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
+        try:
+            bibtext = urlopen(req).read().decode('utf-8')
+        except HTTPError:
+            doi = None  # authors were wrong or anystyle messed up; try a search
+
+    if not doi:  # try querying crossref for this
+        q = cr.works(query=entry['title'],query_author=entry['author'],limit=1,select='DOI,title,author')
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
         # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
         print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
@@ -62,11 +75,6 @@ for key in bib_OD:  # loop entry keys
             doi = q['message']['items'][0]['DOI']
         else:
             doi = None
-
-    else:  # if there is a doi in there already, grab it
-        if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
-            entry['doi'] = entry['doi'][:-1]
-        doi = entry['doi']
 
     if doi:  # if doi not none, use to query for a clean citation
         if '. ' in doi:
@@ -83,37 +91,14 @@ for key in bib_OD:  # loop entry keys
             key0[-1] = key0[-1].rstrip(',') + ''.join(random.choices(string.ascii_letters,k=5)) + ','
             pieces[0] = '{'.join(key0)
             bibtext_out = '\n'.join(pieces)
+            # TODO parse this to an Entry and check to make sure all the pieces are there
             fout.write(bibtext_out)  # write
             fout.write('\n')
-        except HTTPError:  # url does not return (sometimes anystle messes up dois, or authors do)
-            if not searched_doi:  # we haven't already tried crossref, so try it here
-                q = cr.works(query=entry['title'],query_author=entry['author'],limit=2,select='DOI,title,author')
-                print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
-                # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
-                print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
-                        q['message']['items'][0]['author'][0],\
-                        q['message']['items'][0]['DOI']))
-                iok = input('accept entry [Y]/n: ') or 'Y'
-                if iok.lower() == 'y':
-                    doi = q['message']['items'][0]['DOI']
-                    ourl = "https://dx.doi.org/"+doi
-                    req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
-                    try:  # see if this one will resolve
-                        bibtext = urlopen(req).read().decode('utf-8')
-                        bibtext = bibtext.lstrip()  # clean leading space
-                        # make sure bibtex key is unique for biblib; we'll fix these later
-                        pieces = bibtext.split('\n')
-                        key0 = pieces[0].split('{')
-                        key0[-1] = key0[-1].rstrip(',') + ''.join(random.choices(string.ascii_letters,k=5)) + ','
-                        pieces[0] = '{'.join(key0)
-                        bibtext_out = '\n'.join(pieces)
-                        fout.write(bibtext_out)  # write
-                        fout.write('\n')
-                    except HTTPError:  # url *still* does not return
-                        fout.write(entry.to_bib())  # just write what we had to start with
-                        fout.write('\n')
+        except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
+            fout.write(entry.to_bib())  # just write what we had to start with
+            fout.write('\n')
                         
-    else:  # no doi, nothing to search with; just write the initial entry
+    else:  # no doi, from authors or from crossref
         fout.write(entry.to_bib())  # just write what we had to start with
         fout.write('\n')
 
