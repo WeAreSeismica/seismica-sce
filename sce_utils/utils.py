@@ -714,8 +714,10 @@ def print_query_options(q0,i=0):
             q0['auths'], q0['doi'], q0['score']))
     if 'type' in q0.keys():
         print('type: %s\n' % q0['type'])
+    if 'subtype' in q0.keys():
+        print('subtype: %s\n' % q0['subtype'])
     if i = 0:
-        iok = input('accept this [y], reject query (n), or try next match (p): ') or 'y'
+        iok = input('accept this [y], reject query (n), or see next match (p): ') or 'y'
     else:
         iok = input('accept this [y], reject query (n), or use previous match (p): ') or 'y'
     return iok

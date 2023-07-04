@@ -19,7 +19,7 @@ import os, sys, re, random, string
 # Usage: 
     # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib <-k>
 #
-# TODO query two deep and check to make sure first isn't a preprint of the second
+# TODO option to keep initial title/authors if new title/authors (queried) are different
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
 #       (this tends to come up with authors and titles)
 ####
@@ -62,7 +62,7 @@ for key in bib_OD:  # loop entry keys
     doi = None   # to start
     if 'doi' in entry.keys(): # get provided doi, check to make sure it will work
         if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
-            entry['doi'] = entry['doi'][:-1]
+            entry['doi'] = entry['doi'][:-1]  # (this is sometimes an anystyle problem)
         doi = entry['doi']
         ourl = scu.make_doi_url(doi)
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
@@ -71,7 +71,7 @@ for key in bib_OD:  # loop entry keys
         except HTTPError:
             doi = None  # authors made a DOI mistake or anystyle messed up; try a search
 
-    # if url is actually a doi link and we don't have the doi already, try the url
+    # if url looks like a doi link and we don't have the doi already, try the url
     if 'url' in entry.keys() and re.search(r"doi\.org",entry['url']) and not doi:
         req = Request(entry['url'], headers=dict(Accept='application/x-bibtex'))
         try:
@@ -79,7 +79,7 @@ for key in bib_OD:  # loop entry keys
         except HTTPError:
             doi = None  # url is not actually a good DOI link
 
-    if not doi:  # try querying crossref for this
+    if not doi:  # try querying crossref to get a doi
         try:
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,select='DOI,title,author,score,type',sort='score')
@@ -107,14 +107,14 @@ for key in bib_OD:  # loop entry keys
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
-            # get whatever the key is that comes with the bibtex entry (Author1_year?)
-            pieces = bibtext.split('\n')
+            pieces = bibtext.split('\n')  # get bibtex key that comes with the downloaded entry
             key0 = pieces[0].split('{')[1].rstrip(',')
+
             # parse bibtex to an Entry and check to make sure all the main pieces are there
             # we need this bc some metadata deposited with DOIs is imperfect in weird ways
             parser = bbl.Parser()  # need a new parser every time which is annoying
             parsed = parser.parse(bibtext)
-            entry_new = parsed.get_entries()[key0]
+            entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
             rereparse = False
             if 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
                 entry_new['author'] = entry['author']
@@ -142,7 +142,7 @@ for key in bib_OD:  # loop entry keys
 # open final outfile for writing
 fout = open(out_bib,'w')  # will overwrite if file exists
 
-newkey_list = []  # for tracking keys used in case we need 'a' and 'b'
+newkey_list = []  # for tracking keys used in case we need 'a' and 'b', when not keeping keys
 n_with_doi = 0
 n_without_doi = 0
 for key in bib_new:  # loop entry keys
@@ -180,16 +180,22 @@ for key in bib_new:  # loop entry keys
         entry['title'] = entry['title'][:-1]  # remove trailing apostrophe if present
 
     if not args.keepkeys:  # if we want to make new entry keys (docx/odt input file)
-        if 'author' not in entry.keys():
-            entry['author'] = entry['editor']  # TODO catch other cases??
+        if 'author' not in entry.keys():  # our key convention is based on authors and years
+            if 'editor' in entry.keys():
+                entry['author'] = entry['editor']
+            else:
+                print('no author found! available keys are:')
+                print(entry.keys())
+                akey = input('enter a key to use for author: ') or entry.keys()[0]
+                entry['author'] = entry[akey]
             parser = bbl.Parser()  # need to re-parse to get field_pos right in Entry
             parsed = parser.parse(entry.to_bib())
             entry = parsed.get_entries()[key]
 
-        # clean up first author name: no {}, no spaces
+        # clean up first author last name: no {}, no spaces
         auth0 = re.sub(r'[ ]',r'',entry.authors()[0].last.lstrip('{').rstrip('}'))
 
-        # for each, reformat key to be what we'd look for in inline citations
+        # for each, reformat key to be what we will look for in inline citations
         # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
         if len(entry.authors()) > 2:
             newkey = auth0 + 'EA' + entry['year']
