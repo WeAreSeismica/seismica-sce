@@ -55,7 +55,6 @@ bib_new = OrderedDict()         # to save entries with DOIs added
 
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
-    # TODO if url us a key and doi is not, check if url is actually a doi
     doi = None   # to start
     if 'doi' in entry.keys(): # get provided doi, check to make sure it will work
         if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
@@ -70,6 +69,14 @@ for key in bib_OD:  # loop entry keys
             bibtext = urlopen(req).read().decode('utf-8')
         except HTTPError:
             doi = None  # authors made a DOI mistake or anystyle messed up; try a search
+
+    # if url is actually a doi link and we don't have the doi already, try the url
+    if 'url' in entry.keys() and re.search(r"doi\.org",entry['url']) and not doi:
+        req = Request(entry['url'], headers=dict(Accept='application/x-bibtex'))
+        try:
+            bibtext = urlopen(req).read().decode('utf-8')
+        except HTTPError:
+            doi = None  # url is not actually a good DOI link
 
     if not doi:  # try querying crossref for this
         q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
