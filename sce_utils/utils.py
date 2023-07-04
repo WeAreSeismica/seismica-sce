@@ -672,6 +672,37 @@ def _etal_and(bits):
     return bits
 
 ########################################################################
+# bibtex and crossref stuff
+########################################################################
+
+def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype'],i=0):
+    """ Format information (keys in ret) from a dict (q)
+    that is returned from a crossref query via habanero
+    """
+    out = {}
+    qi = q['message']['items'][i]
+    if 'title' in ret and 'title' in qi.keys():
+        out['title'] = qi['title'][0]
+    if 'doi' in ret and 'DOI' in qi.keys():
+        out['doi'] = qi['DOI']
+    if 'score' in ret and 'score' in qi.keys():
+        out['score'] = qi['score']
+    if 'type' in ret and 'type' in qi.keys():
+        out['type'] = qi['type']
+    if 'subtype' in ret and 'subtype' in qi.keys():
+        out['subtype'] = qi['subtype']
+    if 'authors' in ret and 'author' in qi.keys():
+        auths = ''
+        for a in qi['author']:
+            if 'family' in a.keys() and 'given' in a.keys():
+                auths = auths + a['given'] + ' ' + a['family'] + ', '
+            elif 'name' in a.keys():
+                auths = auths + a['name'] + ', '
+        auths = auths[:-2]
+        out['auths'] = auths
+    return out
+
+########################################################################
 # tex escaping for python
 ########################################################################
 

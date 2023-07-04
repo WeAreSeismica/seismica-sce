@@ -1,6 +1,7 @@
 import numpy as np
 import biblib.bib as bbl
 import dateutil.parser as dp
+import sce_utils.utils as scu
 from habanero import Crossref
 from argparse import ArgumentParser
 from collections import OrderedDict
@@ -15,6 +16,9 @@ import os, sys, re, random, string
     # if docx/odt parsing, create standardized entry keys for matching
     # if from tex template, use --keepkeys or -k flag to keep the entry keys in the input file
     # fallback on all queries (crossref and doi.org) is to keep the input entry
+# Usage: 
+    # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib <-k>
+#
 # TODO query two deep and check to make sure first isn't a preprint of the second
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
 #       (this tends to come up with authors and titles)
@@ -80,17 +84,28 @@ for key in bib_OD:  # loop entry keys
 
     if not doi:  # try querying crossref for this
         q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
-                    limit=2,select='DOI,title,author,score',sort='score')
+                    limit=2,select='DOI,title,author,score,type',sort='score')
+        q0 = scu.format_crossref_query(q,i=0)
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
-        # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
-        print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
-                q['message']['items'][0]['author'][0],\
-                q['message']['items'][0]['DOI']))
-        iok = input('accept entry [Y]/n: ') or 'Y'  # TODO option to go to item[1] (eg for preprint)
+        print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\ntype: %s\n' % (q0['title'],\
+                q0['auths'], q0['doi'], q0['score'], q0['type']))
+        iok = input('accept entry, reject query, or try next match [Y]/n/p: ') or 'Y'
         if iok.lower() == 'y':   # if it matches, save the doi
-            doi = q['message']['items'][0]['DOI']
-        else:
+            doi = q0['doi']
+        elif iok.lower() == 'n':
             doi = None
+        elif iok.lower() == 'p':
+            q1 = scu.format_crossref_query(q, i=1)
+            print('second result:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\ntype: %s\n' % (q1['title'],\
+                    q1['auths'], q1['doi'], q1['score'], q1['type']))
+            iok = input('accept entry, reject query, or use previous match [Y]/n/p: ') or 'Y'
+            if iok.lower() == 'y':   # if it matches, save the doi
+                doi = q1['doi']
+            elif iok.lower() == 'n':
+                doi = None
+            elif iok.lower() == 'p':
+                doi = q0['doi']
+            
 
     if doi:  # if doi not none, use to query for a clean citation
         if '. ' in doi:
