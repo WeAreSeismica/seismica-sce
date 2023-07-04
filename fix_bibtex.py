@@ -12,7 +12,9 @@ import os, sys, re, random, string
     # try to find dois where they are missing
     # get nice citations from crossref when we do have dois
     # neaten up bibtex entries, with clean keys for docx/odt parsing
+# TODO query two deep and check to make sure first isn't a preprint of the second
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
+# this tends to come up with authors and titles
 ####
 
 parser = ArgumentParser()
@@ -34,7 +36,7 @@ if os.path.isfile(out_bib):
     if iq == 'n':
         sys.exit()
 
-cr = Crossref(mailto="tech@seismica.org")  # connection for querying
+cr = Crossref(mailto="tech@seismica.org",ua_string='Seismica SCE, seismica.org')  # connection for querying
 
 parser = bbl.Parser()  # parser for bibtex
 parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
@@ -62,7 +64,7 @@ for key in bib_OD:  # loop entry keys
             doi = None  # authors were wrong or anystyle messed up; try a search
 
     if not doi:  # try querying crossref for this
-        q = cr.works(query=entry['title'],query_author=entry['author'],limit=1,select='DOI,title,author')
+        q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],limit=1,select='DOI,title,author,score',sort='score')
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
         # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
         print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
