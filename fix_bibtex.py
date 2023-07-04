@@ -8,19 +8,22 @@ from urllib.request import Request, urlopen, HTTPError
 import os, sys, re, random, string
 
 ####
-# clean up bibtex file produced by anystyle
+# clean up bibtex file produced by anystyle *or* a bib file provided by an author
     # try to find dois where they are missing
     # get nice citations from crossref when we do have dois
-    # neaten up bibtex entries, with clean keys for docx/odt parsing
+    # neaten up bibtex entries (date/year, pages, url)
+    # if docx/odt parsing, create standardized entry keys for matching
+    # if from tex template, use --keepkeys or -k flag to keep the entry keys in the input file
+    # fallback on all queries (crossref and doi.org) is to keep the input entry
 # TODO query two deep and check to make sure first isn't a preprint of the second
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
-# this tends to come up with authors and titles
+#       (this tends to come up with authors and titles)
 ####
 
 parser = ArgumentParser()
 parser.add_argument('--ifile','-i',type=str,help='path to input file')
 parser.add_argument('--ofile','-o',type=str,help='path to output file')
-parser.add_argument('--keepkeys','-k',action='store_true')  # set this flag to keep input keys
+parser.add_argument('--keepkeys','-k',action='store_true')  # set this flag to keep input entry keys
 args = parser.parse_args()
 
 in_bib = args.ifile
@@ -36,14 +39,19 @@ if os.path.isfile(out_bib):
     if iq == 'n':
         sys.exit()
 
-cr = Crossref(mailto="tech@seismica.org",ua_string='Seismica SCE, seismica.org')  # connection for querying
+########################################################################
+# Part 1: try to add DOIs (and nice metadata) to entries from input file
+########################################################################
+
+# connection for querying, being polite for server priority
+cr = Crossref(mailto="tech@seismica.org",ua_string='Seismica SCE, seismica.org')  
 
 parser = bbl.Parser()  # parser for bibtex
 parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 
 # get entries
-bib_OD = parsed.get_entries()  # returns collections.OrderedDict
-bib_new = OrderedDict()
+bib_OD = parsed.get_entries()   # returns collections.OrderedDict
+bib_new = OrderedDict()         # to save entries with DOIs added
 
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
@@ -61,17 +69,18 @@ for key in bib_OD:  # loop entry keys
         try:
             bibtext = urlopen(req).read().decode('utf-8')
         except HTTPError:
-            doi = None  # authors were wrong or anystyle messed up; try a search
+            doi = None  # authors made a DOI mistake or anystyle messed up; try a search
 
     if not doi:  # try querying crossref for this
-        q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],limit=1,select='DOI,title,author,score',sort='score')
+        q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
+                    limit=2,select='DOI,title,author,score',sort='score')
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
         # TODO print first author nicer; need to catch 'name' case as well as 'given' 'family'
         print('received:\ntitle: %s\n1st auth: %s\ndoi: %s\n' % (q['message']['items'][0]['title'][0],\
                 q['message']['items'][0]['author'][0],\
                 q['message']['items'][0]['DOI']))
-        iok = input('accept entry [Y]/n: ') or 'Y'
-        if iok.lower() == 'y':
+        iok = input('accept entry [Y]/n: ') or 'Y'  # TODO option to go to item[1] (eg for preprint)
+        if iok.lower() == 'y':   # if it matches, save the doi
             doi = q['message']['items'][0]['DOI']
         else:
             doi = None
@@ -84,11 +93,12 @@ for key in bib_OD:  # loop entry keys
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
-            # get whatever the key is that comes from crossref
+            # get whatever the key is that comes with the bibtex entry (Author1_year?)
             pieces = bibtext.split('\n')
             key0 = pieces[0].split('{')[1].rstrip(',')
-            # parse to an Entry and check to make sure all the pieces are there
-            parser = bbl.Parser()
+            # parse bibtex to an Entry and check to make sure all the main pieces are there
+            # we need this bc some metadata deposited with DOIs is imperfect in weird ways
+            parser = bbl.Parser()  # need a new parser every time which is annoying
             parsed = parser.parse(bibtext)
             entry_new = parsed.get_entries()[key0]
             rereparse = False
@@ -98,7 +108,7 @@ for key in bib_OD:  # loop entry keys
             if 'title' not in entry_new.keys() and 'title' in entry.keys():
                 entry_new['title'] = entry['title']
                 rereparse = True
-            if rereparse:  # info has been added, re-parse to reset field_pos
+            if rereparse:  # info has been re-added, re-parse to reset field_pos
                 parser = bbl.Parser()
                 parsed = parser.parse(entry_new.to_bib())
                 entry_new = parsed.get_entries()[key0]
@@ -109,9 +119,11 @@ for key in bib_OD:  # loop entry keys
         entry_new = entry  # keep whatever the initial entry was
 
     entry_new.key = key         # keep the input key for now
-    bib_new[key] = entry_new    # as that should be unique, even from anystyle
+    bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
 
-# now go through the new OrderedDict with "cleaner" entries and fix up as needed
+########################################################################
+# Part 2: go through the new OrderedDict with "cleaner" entries and fix up as needed
+########################################################################
 
 # open final outfile for writing
 fout = open(out_bib,'w')  # will overwrite if file exists
@@ -121,8 +133,8 @@ n_with_doi = 0
 n_without_doi = 0
 for key in bib_new:  # loop entry keys
     entry = bib_new[key]
-    # for each, if 'date' is a key, make 'year' based on 'date'
-    if 'date' in entry.keys():
+    # for each, if 'date' is a key and 'year' is not, make 'year' based on 'date'
+    if 'date' in entry.keys() and 'year' not in entry.keys():
         if len(entry['date']) == 4: # assume this means it's a year, which is probably true
             entry['year'] = entry['date']
         else: # some other format, try to parse
@@ -141,7 +153,7 @@ for key in bib_new:  # loop entry keys
 #        _ = entry.pop('pages')
 
     if 'pages' in entry.keys():
-        entry['pages'] = entry['pages'].rstrip(',')  # at least get rid of any trailing commas
+        entry['pages'] = entry['pages'].rstrip(',')  # anystyle often leaves trailing commas
         if "n/a" in entry['pages']:  # sometimes get "n/a -- n/a" or similar from crossref
             _ = entry.pop('pages')
 
