@@ -12,15 +12,14 @@ import os, sys, re, random, string
     # try to find dois where they are missing
     # get nice citations from crossref when we do have dois
     # neaten up bibtex entries, with clean keys for docx/odt parsing
-# TODO option to keep initial keys so we can run this on authors' tex files as well as anystyle
+# TODO why are keys being lower-cased??
 # TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
-# TODO get rid of pages that are n/a-n/a
-# TODO we shouldn't need to write and re-read; make a new OrderedDict in the middle instead
 ####
 
 parser = ArgumentParser()
 parser.add_argument('--ifile','-i',type=str,help='path to input file')
 parser.add_argument('--ofile','-o',type=str,help='path to output file')
+parser.add_argument('--keepkeys','-k',action='store_true')  # set this flag to keep input keys
 args = parser.parse_args()
 
 in_bib = args.ifile
@@ -43,9 +42,7 @@ parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 
 # get entries
 bib_OD = parsed.get_entries()  # returns collections.OrderedDict
-
-# open temp outfile for writing
-fout = open('temp.bib','w')  # for doi'd entries, will overwrite if file exists
+bib_new = OrderedDict()
 
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
@@ -86,17 +83,13 @@ for key in bib_OD:  # loop entry keys
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
-            bibtext = bibtext.lstrip()  # clean leading space
-            # make sure bibtex key is unique for biblib; we'll fix these later
+            # get whatever the key is that comes from crossref
             pieces = bibtext.split('\n')
-            key0 = pieces[0].split('{')
-            key0[-1] = key0[-1].rstrip(',') + ''.join(random.choices(string.ascii_letters,k=5)) + ','
-            pieces[0] = '{'.join(key0)
-            bibtext_out = '\n'.join(pieces)
+            key0 = pieces[0].split('{')[1].rstrip(',')
             # parse to an Entry and check to make sure all the pieces are there
-            parser = bbl.Parser()  # parser for bibtex
-            parsed = parser.parse(bibtext_out)
-            entry_new = parsed.get_entries()[key0[1].rstrip(',').lower()]
+            parser = bbl.Parser()
+            parsed = parser.parse(bibtext)
+            entry_new = parsed.get_entries()[key0.lower()]
             rereparse = False
             if 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
                 entry_new['author'] = entry['author']
@@ -107,25 +100,17 @@ for key in bib_OD:  # loop entry keys
             if rereparse:  # info has been added, re-parse to reset field_pos
                 parser = bbl.Parser()
                 parsed = parser.parse(entry_new.to_bib())
-                entry_new = parsed.get_entries()[key0[1].rstrip(',').lower()]
+                entry_new = parsed.get_entries()[key0.lower()]
         except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
             entry_new = entry  # keep whatever the initial entry was
                         
     else:  # no doi, from authors or from crossref
         entry_new = entry  # keep whatever the initial entry was
 
-    fout.write(entry_new.to_bib())  # just write what we had to start with
-    fout.write('\n')
+    entry_new.key = key         # keep the input key for now
+    bib_new[key] = entry_new    # as that should be unique, even from anystyle
 
-fout.close()
-
-# NOW we reread the temp bib file, which should have all available dois and the best possible
-# citation info, and clean it up to look nicer (esp keys)
-parser = bbl.Parser()  # parser for bibtex
-parsed = parser.parse(open('temp.bib','r'))  # parse the input file with biblib
-
-# get entries
-bib_OD = parsed.get_entries()  # returns collections.OrderedDict
+# now go through the new OrderedDict with "cleaner" entries and fix up as needed
 
 # open final outfile for writing
 fout = open(out_bib,'w')  # will overwrite if file exists
@@ -133,8 +118,8 @@ fout = open(out_bib,'w')  # will overwrite if file exists
 newkey_list = []  # for tracking keys used in case we need 'a' and 'b'
 n_with_doi = 0
 n_without_doi = 0
-for key in bib_OD:  # loop entry keys
-    entry = bib_OD[key]
+for key in bib_new:  # loop entry keys
+    entry = bib_new[key]
     # for each, if 'date' is a key, make 'year' based on 'date'
     if 'date' in entry.keys():
         if len(entry['date']) == 4: # assume this means it's a year, which is probably true
@@ -156,6 +141,8 @@ for key in bib_OD:  # loop entry keys
 
     if 'pages' in entry.keys():
         entry['pages'] = entry['pages'].rstrip(',')  # at least get rid of any trailing commas
+        if "n/a" in entry['pages']:  # sometimes get "n/a -- n/a" or similar from crossref
+            _ = entry.pop('pages')
 
     if 'note' in entry.keys():
         entry['note'] = re.sub(r'Available at','',entry['note'])
@@ -165,35 +152,36 @@ for key in bib_OD:  # loop entry keys
     if entry['title'].endswith("'"):
         entry['title'] = entry['title'][:-1]  # remove trailing apostrophe if present
 
-    if 'author' not in entry.keys():
-        entry['author'] = entry['editor']  # TODO catch other cases??
-        parser = bbl.Parser()  # need to re-parse to get field_pos right in Entry
-        parsed = parser.parse(entry.to_bib())
-        entry = parsed.get_entries()[key]
+    if not args.keepkeys:  # if we want to make new entry keys (docx/odt input file)
+        if 'author' not in entry.keys():
+            entry['author'] = entry['editor']  # TODO catch other cases??
+            parser = bbl.Parser()  # need to re-parse to get field_pos right in Entry
+            parsed = parser.parse(entry.to_bib())
+            entry = parsed.get_entries()[key]
 
-    # clean up first author name: no {}, no spaces
-    auth0 = re.sub(r'[ ]',r'',entry.authors()[0].last.lstrip('{').rstrip('}'))
+        # clean up first author name: no {}, no spaces
+        auth0 = re.sub(r'[ ]',r'',entry.authors()[0].last.lstrip('{').rstrip('}'))
 
-    # for each, reformat key to be what we'd look for in inline citations
-    # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
-    if len(entry.authors()) > 2:
-        newkey = auth0 + 'EA' + entry['year']
-    elif len(entry.authors()) == 2:
-        auth1 = re.sub(r'[ ]',r'',entry.authors()[1].last.lstrip('{').rstrip('}'))
-        newkey = auth0 + auth1 + entry['year']
-    elif len(entry.authors()) == 1:
-        newkey = auth0 + entry['year']
-    newkey = newkey.replace(" ","")  # get rid of spaces if there are any (like van Keken or something)
-    newkey = newkey.replace("-","")  # get rid of hyphens, which tex2jats doesn't like
-    nextletter = 'a'
-    if newkey + nextletter in newkey_list:  # already have 'a', try the next letter
-        thisauthor = [e for e in newkey_list if e.startswith(newkey)]
-        alphabet = [e[-1] for e in thisauthor]
-        nextletter = chr(ord(alphabet[-1]) + 1)
-    newkey = newkey + nextletter  # this is what we'll use for bibtex
+        # for each, reformat key to be what we'd look for in inline citations
+        # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
+        if len(entry.authors()) > 2:
+            newkey = auth0 + 'EA' + entry['year']
+        elif len(entry.authors()) == 2:
+            auth1 = re.sub(r'[ ]',r'',entry.authors()[1].last.lstrip('{').rstrip('}'))
+            newkey = auth0 + auth1 + entry['year']
+        elif len(entry.authors()) == 1:
+            newkey = auth0 + entry['year']
+        newkey = newkey.replace(" ","")  # get rid of spaces if there are any (like van Keken or something)
+        newkey = newkey.replace("-","")  # get rid of hyphens, which tex2jats doesn't like
+        nextletter = 'a'
+        if newkey + nextletter in newkey_list:  # already have 'a', try the next letter
+            thisauthor = [e for e in newkey_list if e.startswith(newkey)]
+            alphabet = [e[-1] for e in thisauthor]
+            nextletter = chr(ord(alphabet[-1]) + 1)
+        newkey = newkey + nextletter  # this is what we'll use for bibtex
 
-    newkey_list.append(newkey)
-    entry.key = newkey
+        newkey_list.append(newkey)
+        entry.key = newkey
 
     # check if doi field is present
     if 'doi' in entry.keys() or 'DOI' in entry.keys():
