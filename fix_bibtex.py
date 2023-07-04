@@ -3,7 +3,7 @@ import biblib.bib as bbl
 import dateutil.parser as dp
 from habanero import Crossref
 from argparse import ArgumentParser
-from collections import Counter
+from collections import OrderedDict
 from urllib.request import Request, urlopen, HTTPError
 import os, sys, re, random, string
 
@@ -12,8 +12,10 @@ import os, sys, re, random, string
     # try to find dois where they are missing
     # get nice citations from crossref when we do have dois
     # neaten up bibtex entries, with clean keys for docx/odt parsing
-# TODO deal with the case where the supposedly "cleaner" doi-search entry is missing author info
 # TODO option to keep initial keys so we can run this on authors' tex files as well as anystyle
+# TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
+# TODO get rid of pages that are n/a-n/a
+# TODO we shouldn't need to write and re-read; make a new OrderedDict in the middle instead
 ####
 
 parser = ArgumentParser()
@@ -91,16 +93,29 @@ for key in bib_OD:  # loop entry keys
             key0[-1] = key0[-1].rstrip(',') + ''.join(random.choices(string.ascii_letters,k=5)) + ','
             pieces[0] = '{'.join(key0)
             bibtext_out = '\n'.join(pieces)
-            # TODO parse this to an Entry and check to make sure all the pieces are there
-            fout.write(bibtext_out)  # write
-            fout.write('\n')
+            # parse to an Entry and check to make sure all the pieces are there
+            parser = bbl.Parser()  # parser for bibtex
+            parsed = parser.parse(bibtext_out)
+            entry_new = parsed.get_entries()[key0[1].rstrip(',').lower()]
+            rereparse = False
+            if 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
+                entry_new['author'] = entry['author']
+                rereparse = True
+            if 'title' not in entry_new.keys() and 'title' in entry.keys():
+                entry_new['title'] = entry['title']
+                rereparse = True
+            if rereparse:  # info has been added, re-parse to reset field_pos
+                parser = bbl.Parser()
+                parsed = parser.parse(entry_new.to_bib())
+                entry_new = parsed.get_entries()[key0[1].rstrip(',').lower()]
         except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
-            fout.write(entry.to_bib())  # just write what we had to start with
-            fout.write('\n')
+            entry_new = entry  # keep whatever the initial entry was
                         
     else:  # no doi, from authors or from crossref
-        fout.write(entry.to_bib())  # just write what we had to start with
-        fout.write('\n')
+        entry_new = entry  # keep whatever the initial entry was
+
+    fout.write(entry_new.to_bib())  # just write what we had to start with
+    fout.write('\n')
 
 fout.close()
 
