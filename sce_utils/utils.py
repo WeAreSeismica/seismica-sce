@@ -702,6 +702,38 @@ def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype
         out['auths'] = auths
     return out
 
+def print_query_options(q0,i=0):
+    """ Take reformatted dict of query outputs and print relevant info,
+    ask for user input to decide whether the query returned a good match
+    Note: we're assuming title, authors, doi, and score will be in the output dict
+        (type not assumed)
+        this should usually be a good assumption? but could make more robust to keys
+        if it turns out to be an issue
+    """
+    print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\n' % (q0['title'],\
+            q0['auths'], q0['doi'], q0['score']))
+    if 'type' in q0.keys():
+        print('type: %s\n' % q0['type'])
+    if i = 0:
+        iok = input('accept this [y], reject query (n), or try next match (p): ') or 'y'
+    else:
+        iok = input('accept this [y], reject query (n), or use previous match (p): ') or 'y'
+    return iok
+
+def make_doi_url(doi,root='https://dx.doi.org/'):
+    """ Construct url for requesting bibtex based on doi
+    The only cleaning we do is to check if it ends with '. ' which I guess
+        would indicate poor scraping from a sentence termination
+    Some previous versions escaped certain characters (parens?) but that didn't
+        seem to be necessary
+    """
+    if '. ' in doi:
+        ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
+    else:
+        ourl = "https://dx.doi.org/"+doi
+    return doi
+
+
 ########################################################################
 # tex escaping for python
 ########################################################################

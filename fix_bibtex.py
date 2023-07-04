@@ -64,10 +64,7 @@ for key in bib_OD:  # loop entry keys
         if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
             entry['doi'] = entry['doi'][:-1]
         doi = entry['doi']
-        if '. ' in doi:
-            ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
-        else:
-            ourl = "https://dx.doi.org/"+doi
+        ourl = scu.make_doi_url(doi)
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
@@ -83,35 +80,30 @@ for key in bib_OD:  # loop entry keys
             doi = None  # url is not actually a good DOI link
 
     if not doi:  # try querying crossref for this
-        q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
-                    limit=2,select='DOI,title,author,score,type',sort='score')
+        try:
+            q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
+                        limit=2,select='DOI,title,author,score,type',sort='score')
+        except HTTPError:  # I think this happens when select asks for a nonexistent field, likely type
+            q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
+                        limit=2,sort='score')
         q0 = scu.format_crossref_query(q,i=0)
         print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
-        print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\ntype: %s\n' % (q0['title'],\
-                q0['auths'], q0['doi'], q0['score'], q0['type']))
-        iok = input('accept entry, reject query, or try next match [Y]/n/p: ') or 'Y'
+        iok = scu.print_query_options(q0,i=0)
         if iok.lower() == 'y':   # if it matches, save the doi
             doi = q0['doi']
         elif iok.lower() == 'n':
             doi = None
         elif iok.lower() == 'p':
-            q1 = scu.format_crossref_query(q, i=1)
-            print('second result:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\ntype: %s\n' % (q1['title'],\
-                    q1['auths'], q1['doi'], q1['score'], q1['type']))
-            iok = input('accept entry, reject query, or use previous match [Y]/n/p: ') or 'Y'
+            iok = scu.print_query_options(q1,i=1)
             if iok.lower() == 'y':   # if it matches, save the doi
                 doi = q1['doi']
             elif iok.lower() == 'n':
                 doi = None
             elif iok.lower() == 'p':
                 doi = q0['doi']
-            
 
     if doi:  # if doi not none, use to query for a clean citation
-        if '. ' in doi:
-            ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
-        else:
-            ourl = "https://dx.doi.org/"+doi
+        ourl = scu.make_doi_url(doi)
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
