@@ -85,7 +85,7 @@ for key in bib_OD:  # loop entry keys
     if not doi:  # try querying crossref to get a doi
         try:
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
-                        limit=2,select='DOI,title,author,score,type',sort='score')
+                        limit=2,select='DOI,title,author,score,type,published',sort='score')
         except HTTPError:  # I think this happens when select asks for a nonexistent field, likely type
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,sort='score')

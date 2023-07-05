@@ -1,5 +1,6 @@
 import numpy as np
 from re import finditer, findall
+import dateutil.parser as dp
 import re
 import os, sys
 
@@ -675,7 +676,7 @@ def _etal_and(bits):
 # bibtex and crossref stuff
 ########################################################################
 
-def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype'],i=0):
+def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype','pdate'],i=0):
     """ Format information (keys in ret) from a dict (q)
     that is returned from a crossref query via habanero
     """
@@ -691,6 +692,9 @@ def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype
         out['type'] = qi['type']
     if 'subtype' in ret and 'subtype' in qi.keys():
         out['subtype'] = qi['subtype']
+    if 'pdate' in ret and 'published' in qi.keys():
+        if 'date-parts' in qi['published'].keys():
+            out['pdate'] = dp.parse('-'.join([str(e) for e in qi['published']['date-parts'][0]]))
     if 'authors' in ret and 'author' in qi.keys():
         auths = ''
         for a in qi['author']:
@@ -710,12 +714,14 @@ def print_query_options(q0,i=0):
         this should usually be a good assumption? but could make more robust to keys
         if it turns out to be an issue
     """
-    print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f' % (q0['title'],\
+    print('received:\n\ttitle: %s\n\tby: %s\n\tdoi: %s\n\tscore: %.2f' % (q0['title'],\
             q0['auths'], q0['doi'], q0['score']))
+    if 'pdate' in q0.keys():
+        print('\tyear: %i' % q0['pdate'].year)
     if 'type' in q0.keys():
-        print('type: %s' % q0['type'])
+        print('\ttype: %s' % q0['type'])
     if 'subtype' in q0.keys():
-        print('subtype: %s' % q0['subtype'])
+        print('\tsubtype: %s' % q0['subtype'])
     if i == 0:
         iok = input('accept this [y], reject query (n), or see next match (p): ') or 'y'
     else:
