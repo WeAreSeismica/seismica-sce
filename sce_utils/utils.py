@@ -710,13 +710,13 @@ def print_query_options(q0,i=0):
         this should usually be a good assumption? but could make more robust to keys
         if it turns out to be an issue
     """
-    print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f\n' % (q0['title'],\
+    print('received:\ntitle: %s\nby: %s\ndoi: %s\nscore: %.2f' % (q0['title'],\
             q0['auths'], q0['doi'], q0['score']))
     if 'type' in q0.keys():
-        print('type: %s\n' % q0['type'])
+        print('type: %s' % q0['type'])
     if 'subtype' in q0.keys():
-        print('subtype: %s\n' % q0['subtype'])
-    if i = 0:
+        print('subtype: %s' % q0['subtype'])
+    if i == 0:
         iok = input('accept this [y], reject query (n), or see next match (p): ') or 'y'
     else:
         iok = input('accept this [y], reject query (n), or use previous match (p): ') or 'y'
@@ -733,7 +733,7 @@ def make_doi_url(doi,root='https://dx.doi.org/'):
         ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
     else:
         ourl = "https://dx.doi.org/"+doi
-    return doi
+    return ourl
 
 
 ########################################################################
