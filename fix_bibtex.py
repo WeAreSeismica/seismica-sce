@@ -6,7 +6,7 @@ from habanero import Crossref
 from argparse import ArgumentParser
 from collections import OrderedDict
 from urllib.request import Request, urlopen, HTTPError
-import os, sys, re, random, string
+import os, sys, re
 
 ####
 # clean up bibtex file produced by anystyle *or* a bib file provided by an author
@@ -20,7 +20,7 @@ import os, sys, re, random, string
 # Usage: 
     # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib <-k>
 
-# TODO format terminal printing/inputs better
+# TODO format terminal printing/inputs better (\033[1m and \033[0m for bold)
 # TODO actually un-tex/html-escape special characters from doi.org bibtex entries?
     # like &lt; and {\'{e}} or whatever (this tends to come up with authors and titles)
     # for now this is taken care of by option to keep old entry title and/or authors
