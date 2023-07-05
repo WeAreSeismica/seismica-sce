@@ -11,17 +11,19 @@ import os, sys, re, random, string
 ####
 # clean up bibtex file produced by anystyle *or* a bib file provided by an author
     # try to find dois where they are missing
-    # get nice citations from crossref when we do have dois
-    # neaten up bibtex entries (date/year, pages, url)
-    # if docx/odt parsing, create standardized entry keys for matching
-    # if from tex template, use --keepkeys or -k flag to keep the entry keys in the input file
+    # get nice citations from doi.org when we do have dois
+    # neaten up all bibtex entries (date/year, pages, url)
+        # if docx/odt parsing, create standardized entry keys for matching
+        # if from tex template, use --keepkeys or -k flag to keep the initial entry keys
     # fallback on all queries (crossref and doi.org) is to keep the input entry
+
 # Usage: 
     # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib <-k>
-#
-# TODO option to keep initial title/authors if new title/authors (queried) are different
-# TODO un-tex/html-escape special characters from crossref search? like &lt; and {\'{e}} or whatever
-#       (this tends to come up with authors and titles)
+
+# TODO actually un-tex/html-escape special characters from doi.org bibtex entries?
+    # like &lt; and {\'{e}} or whatever (this tends to come up with authors and titles)
+    # for now this is taken care of by option to keep old entry title and/or authors
+# TODO do we really need to keep page number info? tends to be poorly curated/mixed bag
 ####
 
 parser = ArgumentParser()
@@ -86,15 +88,16 @@ for key in bib_OD:  # loop entry keys
         except HTTPError:  # I think this happens when select asks for a nonexistent field, likely type
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,sort='score')
-        q0 = scu.format_crossref_query(q,i=0)
-        print('\nqueried for:\ntitle: %s\nby: %s\n' % (entry['title'],entry['author']))
-        iok = scu.print_query_options(q0,i=0)
+        q0 = scu.format_crossref_query(q, i=0)
+        print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
+        iok = scu.print_query_options(q0, i=0)
         if iok.lower() == 'y':   # if it matches, save the doi
             doi = q0['doi']
         elif iok.lower() == 'n':
             doi = None
         elif iok.lower() == 'p':
-            iok = scu.print_query_options(q1,i=1)
+            q1 = scu.format_crossref_query(q, i=1)
+            iok = scu.print_query_options(q1, i=1)
             if iok.lower() == 'y':   # if it matches, save the doi
                 doi = q1['doi']
             elif iok.lower() == 'n':
@@ -115,17 +118,45 @@ for key in bib_OD:  # loop entry keys
             parser = bbl.Parser()  # need a new parser every time which is annoying
             parsed = parser.parse(bibtext)
             entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
+
+            # see if we need to fix/un-replace authors or titles
+            # this is a kind of shortcut to dealing with some of the odd formatting (tex
+            # escaping, html escaping) that sometimes shows up in the doi.org bibtex entries
             rereparse = False
-            if 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
+            # first check if there are author list inconsistencies, see if we want old or new list
+            if 'author' in entry_new.keys() and 'author' in entry.keys():
+                if len(entry.authors()) != len(entry_new.authors()) or \
+                        re.search(r'[^\.a-zA-Z, -]',entry_new['author']):
+                    print('\nchecking '+entry.key+' author list: ')
+                    print('old: %s' % entry['author'])
+                    print('new: %s' % entry_new['author'])
+                    ika = input('keep (o)ld or [n]ew? >> ') or 'n'
+                    if ika == 'o':
+                        entry_new['author'] = entry['author']
+                        rereparse = True
+            elif 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
                 entry_new['author'] = entry['author']
                 rereparse = True
-            if 'title' not in entry_new.keys() and 'title' in entry.keys():
+
+            # next check if there are title inconsistencies (easier to check tbh)
+            if 'title' in entry_new.keys() and 'title' in entry.keys():
+                if entry['title'] != entry_new['title']:
+                    print('\nchecking '+entry.key+' title: ')
+                    print('old: %s' % entry['title'])
+                    print('new: %s' % entry_new['title'])
+                    ikt = input('keep (o)ld or [n]ew? >> ') or 'n'
+                    if ikt == 'o':
+                        entry_new['title'] = entry['title']
+                        rereparse = True
+            elif 'title' not in entry_new.keys() and 'title' in entry.keys():
                 entry_new['title'] = entry['title']
                 rereparse = True
+
             if rereparse:  # info has been re-added, re-parse to reset field_pos
                 parser = bbl.Parser()
                 parsed = parser.parse(entry_new.to_bib())
                 entry_new = parsed.get_entries()[key0]
+
         except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
             entry_new = entry  # keep whatever the initial entry was
                         
@@ -161,12 +192,8 @@ for key in bib_new:  # loop entry keys
         if re.search(r"doi\.org",entry['url']):  # check if url is just a doi link
             _ = entry.pop('url')  # if it is, we should have used it earlier and can clean now
 
-    # TODO decide if pages should ever be kept
-    # tends to be a messy field; sometimes an id#, sometimes page range, sometimes number of pages
-#    if 'pages' in entry.keys():  
-#        _ = entry.pop('pages')
-
     if 'pages' in entry.keys():
+#        _ = entry.pop('pages')
         entry['pages'] = entry['pages'].rstrip(',')  # anystyle often leaves trailing commas
         if "n/a" in entry['pages']:  # sometimes get "n/a -- n/a" or similar from crossref
             _ = entry.pop('pages')
