@@ -735,6 +735,8 @@ def make_doi_url(doi,root='https://dx.doi.org/'):
     Some previous versions escaped certain characters (parens?) but that didn't
         seem to be necessary
     """
+    if doi.lstrip().lower().startswith('doi:'):
+        doi = doi.lstrip()[4:].lstrip()  # get rid of any doi: 10.etc syntax (old style)
     if '. ' in doi:
         ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
     else:
