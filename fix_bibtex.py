@@ -24,6 +24,7 @@ import os, sys, re
     # like &lt; and {\'{e}} or whatever (this tends to come up with authors and titles)
     # for now this is taken care of by option to keep old entry title and/or authors
 # TODO do we really need to keep page number info? tends to be poorly curated/mixed bag
+# TODO query limit 5 or so, options for scrolling back and forth before choosing a ref (or not)
 ####
 
 parser = ArgumentParser()
@@ -63,7 +64,6 @@ for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
     doi = None   # to start, assume no doi
     if 'doi' in entry.keys(): # get provided doi if present, check to make sure it will work
-        # TODO: doi:[doi] format still comes up sometimes, catch that
         if entry['doi'][-1] == '.':             # check if doi ends with . and if it does, get rid of the .
             entry['doi'] = entry['doi'][:-1]    # (this is sometimes an anystyle problem)
         doi = entry['doi']
@@ -83,9 +83,6 @@ for key in bib_OD:  # loop entry keys
             doi = None  # url is not actually a good DOI link
 
     if not doi:  # try querying crossref to get a doi
-        # TODO do we want a while loop to query for more than 2 entries if someone wants to go furter down the
-        # list of potential matches? might be more than we need but not too hard to implement
-        # should probably set a max returns regardless (ie limit=5) to be nice to crossref
         try:
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,select='DOI,title,author,score,type,published',sort='score')
