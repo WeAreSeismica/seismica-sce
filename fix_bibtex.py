@@ -1,4 +1,3 @@
-import numpy as np
 import biblib.bib as bbl
 import dateutil.parser as dp
 import sce_utils.utils as scu
@@ -18,7 +17,7 @@ import os, sys, re
     # fallback on all queries (crossref and doi.org) is to keep the input entry
 
 # Usage: 
-    # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib <-k>
+    # python3 fix_bibtex.py -i path/to/input.bib -o path_to_output.bib [-k]
 
 # TODO format terminal printing/inputs better (\033[1m and \033[0m for bold)
 # TODO actually un-tex/html-escape special characters from doi.org bibtex entries?
@@ -28,9 +27,9 @@ import os, sys, re
 ####
 
 parser = ArgumentParser()
-parser.add_argument('--ifile','-i',type=str,help='path to input file')
-parser.add_argument('--ofile','-o',type=str,help='path to output file')
-parser.add_argument('--keepkeys','-k',action='store_true')  # set this flag to keep input entry keys
+parser.add_argument('--ifile','-i',type=str,help='path to input bib file')
+parser.add_argument('--ofile','-o',type=str,help='path to output bib file')
+parser.add_argument('--keepkeys','-k',action='store_true',help='flag to retain input bib entry keys for output')
 args = parser.parse_args()
 
 in_bib = args.ifile
@@ -62,10 +61,11 @@ bib_new = OrderedDict()         # to save entries with DOIs added
 
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
-    doi = None   # to start
-    if 'doi' in entry.keys(): # get provided doi, check to make sure it will work
-        if entry['doi'][-1] == '.':  # check if doi ends with . and if it does, get rid of the .
-            entry['doi'] = entry['doi'][:-1]  # (this is sometimes an anystyle problem)
+    doi = None   # to start, assume no doi
+    if 'doi' in entry.keys(): # get provided doi if present, check to make sure it will work
+        # TODO: doi:[doi] format still comes up sometimes, catch that
+        if entry['doi'][-1] == '.':             # check if doi ends with . and if it does, get rid of the .
+            entry['doi'] = entry['doi'][:-1]    # (this is sometimes an anystyle problem)
         doi = entry['doi']
         ourl = scu.make_doi_url(doi)
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
@@ -83,12 +83,14 @@ for key in bib_OD:  # loop entry keys
             doi = None  # url is not actually a good DOI link
 
     if not doi:  # try querying crossref to get a doi
+        # TODO do we want a while loop to query for more than 2 entries if someone wants to go furter down the
+        # list of potential matches? might be more than we need but not too hard to implement
+        # should probably set a max returns regardless (ie limit=5) to be nice to crossref
         try:
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,select='DOI,title,author,score,type,published',sort='score')
-        except HTTPError:  # I think this happens when select asks for a nonexistent field, likely type
-            q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
-                        limit=2,sort='score')
+        except HTTPError:  # shouldn't happen, but if it does anyway we give up on this one
+            continue
         q0 = scu.format_crossref_query(q, i=0)
         print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
         iok = scu.print_query_options(q0, i=0)
@@ -121,8 +123,8 @@ for key in bib_OD:  # loop entry keys
             entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
 
             # see if we need to fix/un-replace authors or titles
-            # this is a kind of shortcut to dealing with some of the odd formatting (tex
-            # escaping, html escaping) that sometimes shows up in the doi.org bibtex entries
+            # this is a kind of patch for dealing with the odd formatting (tex escaping,
+            # html escaping) that occastionally shows up in the doi.org bibtex entries
             rereparse = False
             # first check if there are author list inconsistencies, see if we want old or new list
             if 'author' in entry_new.keys() and 'author' in entry.keys():
@@ -184,11 +186,17 @@ for key in bib_new:  # loop entry keys
         if len(entry['date']) == 4: # assume this means it's a year, which is probably true
             entry['year'] = entry['date']
         else: # some other format, try to parse
-            try_year = dp.parse(entry['date']).year
+            try:
+                try_year = dp.parse(entry['date']).year
+            except:  # unspecified error with dateutil parsing
+                try_year = entry['date']
             print('date is %s, year set to %s' % (entry['date'],try_year))
             iy = input('enter corrected year if needed: ') or None
             if iy != None:
                 entry['year'] = iy
+            else:
+                entry['year'] = try_year
+
     if 'url' in entry.keys():
         if re.search(r"doi\.org",entry['url']):  # check if url is just a doi link
             _ = entry.pop('url')  # if it is, we should have used it earlier and can clean now
