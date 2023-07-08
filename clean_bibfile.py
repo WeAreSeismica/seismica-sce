@@ -1,7 +1,7 @@
 import biblib.bib as bbl
 from argparse import ArgumentParser
 from collections import OrderedDict
-import os
+import os, re
 
 ####
 # check a bibtex file against a tex file and clean out any unused references in the bib file
@@ -40,13 +40,14 @@ bib_rogue = OrderedDict()   # for the entries that are not referenced in the tex
 with open(in_tex,'r') as file:
     all_tex_text = file.read()
 
-# TODO: find keys that are used with regex (re.findall(r'cite.{(.*?)}') or similar)
-# as is we are assuming that citekeys will not randomly show up in the text outside of cite commands
-# which is probably reasonable but is not the absolute most robust way to do things
+cks = ','.join(re.findall(r'cite.{(.*?)}',all_tex_text)).split(',')  # join and split for individual keys
+cks2 = ','.join(re.findall(r'cite.\[.*?\]{(.*?)}',all_tex_text)).split(',')  # for cite* with pre and/or post text
+cks.extend(cks2)
+cks = [e.lstrip().rstrip() for e in cks]
 
 for key in bib_init.keys():
     entry = bib_init[key]
-    if key in all_tex_text:
+    if key in cks:
         bib_used[key] = entry
     else:
         bib_rogue[key] = entry
