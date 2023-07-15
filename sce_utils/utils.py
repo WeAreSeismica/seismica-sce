@@ -648,10 +648,10 @@ def _test_test_cite(test_cite,bibkeys):
     is_badref = False
     is_abamb = False
 
-    if test_cite.lower() + 'a' not in bibkeys:
+    if test_cite + 'a' not in bibkeys:  # used to be test_cite.lower() for both but biblib preserves case now
         is_badref = True
     else:
-        if test_cite.lower() + 'b' in bibkeys:
+        if test_cite + 'b' in bibkeys:
             is_abamb = True
 
     return is_badref, is_abamb
