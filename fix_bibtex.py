@@ -88,22 +88,25 @@ for key in bib_OD:  # loop entry keys
                         limit=2,select='DOI,title,author,score,type,published',sort='score')
         except HTTPError:  # shouldn't happen, but if it does anyway we give up on this one
             continue
-        q0 = scu.format_crossref_query(q, i=0)
-        print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
-        iok = scu.print_query_options(q0, i=0)
-        if iok.lower() == 'y':   # if it matches, save the doi
-            doi = q0['doi']
-        elif iok.lower() == 'n':
-            doi = None
-        elif iok.lower() == 'p':
-            q1 = scu.format_crossref_query(q, i=1)
-            iok = scu.print_query_options(q1, i=1)
+        except bbl.FieldError:  # probably no 'author' - might be 'editor'
+            continue
+        if q['message']['total-results'] > 0:  # TODO deal with case where exactly 1 result
+            q0 = scu.format_crossref_query(q, i=0)
+            print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
+            iok = scu.print_query_options(q0, i=0)
             if iok.lower() == 'y':   # if it matches, save the doi
-                doi = q1['doi']
+                doi = q0['doi']
             elif iok.lower() == 'n':
                 doi = None
             elif iok.lower() == 'p':
-                doi = q0['doi']
+                q1 = scu.format_crossref_query(q, i=1)
+                iok = scu.print_query_options(q1, i=1)
+                if iok.lower() == 'y':   # if it matches, save the doi
+                    doi = q1['doi']
+                elif iok.lower() == 'n':
+                    doi = None
+                elif iok.lower() == 'p':
+                    doi = q0['doi']
 
     if doi:  # if doi not none, use to query for a clean citation
         ourl = scu.make_doi_url(doi)
@@ -126,7 +129,7 @@ for key in bib_OD:  # loop entry keys
             # first check if there are author list inconsistencies, see if we want old or new list
             if 'author' in entry_new.keys() and 'author' in entry.keys():
                 if len(entry.authors()) != len(entry_new.authors()) or \
-                        re.search(r'[^\.a-zA-Z, -]',entry_new['author']):
+                        re.search(r'[^\.a-zA-Z, -]',entry_new['author']):  # TODO this needs work - say which criterion was hit
                     print('\nchecking '+entry.key+' author list: ')
                     print('old: %s' % entry['author'])
                     print('new: %s' % entry_new['author'])
