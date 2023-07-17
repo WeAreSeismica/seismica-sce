@@ -89,6 +89,10 @@ for key in bib_OD:  # loop entry keys
         except HTTPError:  # shouldn't happen, but if it does anyway we give up on this one
             continue
         except bbl.FieldError:  # probably no 'author' - might be 'editor'
+            # in this (pretty edge) case, just keep the entry as is and move on
+            entry_new = entry  # keep whatever the initial entry was
+            entry_new.key = key         # keep the input key for now
+            bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
             continue
         if q['message']['total-results'] > 0:  # TODO deal with case where exactly 1 result
             q0 = scu.format_crossref_query(q, i=0)
