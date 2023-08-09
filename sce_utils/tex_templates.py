@@ -21,7 +21,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 %! TEX TS-program = lualatex
 %! TEX encoding = UTF-8 Unicode
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% options: report, breakmath, proof, onecolumn, invited
+% options: report, breakmath, proof, onecolumn, invited, opinion
 \documentclass["""+docops+"""]{seismica} 
 
 % if a report, specify report type:
@@ -32,7 +32,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 %\\reportheader{Field Campaign Report}
 
 % SCE team metadata:
-\dois{10.0000/issn-issn}
+\dois{10.26443/seismica.v0i0.N}
 \\receiveddate{DATE HERE}
 \\accepteddate{DATE HERE}
 \publisheddate{DATE HERE}
@@ -76,17 +76,17 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout.write('\n')
 
     if len(other_langs) > 0:
-        header2 = """\\usepackage{polyglossia}
-\\usepackage{fontspec}
-\\setmainlanguage[]{english}
-\\setotherlanguages{
+        header2 = """\\setotherlanguages{
 """
         for l in other_langs:
             header2 += '%s,' % l
         header2 = header2[:-1]
         header2 += """}\n
-%\\newfontfamily\thaifont[Script=Thai]{Noto Serif Thai}
-%% also see https://www.overleaf.com/latex/examples/how-to-write-multilingual-text-with-different-scripts-in-latex/wfdxqhcyyjxz for reference
+%% Do not put arabic in \setotherlanguages{} as it is not supported by polyglossia
+%% Instead, use these commands within the text:
+%%\\begin{Arabic} and \end{Arabic} around paragraphs in Arabic
+%%\\n{} to wrap any digits within Arabic text that should read left-to-right
+%%\\textarabic{} for Arabic text embedded in a left-to-right paragraph
 
 """
         fout.write(header2)
@@ -116,5 +116,3 @@ def add_abstracts(fout,summaries):
     fout.write(towrite)
 
     return fout
-
-

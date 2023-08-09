@@ -3,7 +3,7 @@ import sce_utils.tex_templates as tt
 import sce_utils.utils as ut
 import numpy as np
 from argparse import ArgumentParser
-import os, sys
+import os, sys, re
 
 
 ########################################################################
@@ -328,7 +328,11 @@ while not goto_end:
             to_write = ut.non_breaking_space(to_write)
 
             # a few last checks for special cases:
-            if to_write.lstrip().startswith('\\textbf{Figure') or to_write.lstrip().startswith('\\textbf{Table'): # likely a caption
+            regex_figcap = bool(re.match(r'^Figure [1-9]{1,2}[\.:]',to_write))  # try to match lines that are promising but missing bold tag
+            regex_tabcap = bool(re.match(r'^Table [1-9]{1,2}[\.:]',to_write))
+            start_figcap = to_write.lstrip().startswith('\\textbf{Figure')
+            start_tabcap = to_write.lstrip().startswith('\\textbf{Table')
+            if start_figcap or start_tabcap or regex_figcap or regex_tabcap: # likely a caption
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n: ') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
@@ -343,13 +347,15 @@ while not goto_end:
                             fullcap = tag.join(np.append(test,splits[2:]))
                         else:
                             fullcap = test
-                        if to_write.startswith('\\textbf{Figure'):
+                        if start_figcap or regex_figcap:
                             figcap[tag] = fullcap.lstrip().rstrip()
-                        elif to_write.startswith('\\textbf{Table'):
+                        elif start_tabcap or regex_tabcap:
                             tabcap[tag] = fullcap.lstrip().rstrip()
                     to_write = ''
+
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
                 ftex_out.write('\\noindent \n')   # are probably continuing sentences after eqns
+
             ftex_out.write(to_write)    # finally, write the line
 
 
