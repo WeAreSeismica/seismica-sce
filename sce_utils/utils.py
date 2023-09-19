@@ -7,6 +7,68 @@ import os, sys
 # functions for text processing of pandoc outputs
 ####
 
+def clean_enumerates(ifile_name):
+    """
+    read an entire pandoc file and clean out excess enumerates, mark them so we can find them
+    as section headings later
+    """
+    ftex_in = open(ifile_name,'r')
+    ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
+    ftex_in.close()
+
+    # look through lines for things that could be headers but aren't clearly marked via pandoc
+    # to look for: \textbf{} that is the whole line, no more no less; \enumerate{} with one \item
+    i_tbf = np.where([l.startswith('\\textbf{') for l in ftext])[0]  # indices of lines in ftext starting with \textbf{
+    for i in i_tbf:
+        isfig = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
+        istab = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
+        if bool(re.match(r'^\\textbf\{[^{]*\}$',ftext[i].strip())) and not isfig and not istab:  # regex to see if these are likely headers
+            newline = re.findall(r'^\\textbf\{([^{]*)\}$',ftext[i].strip())[0]  # capture content of bold tag
+            newline = '[SECTION HEADER level unknown] {' + newline + '}'
+            ftext[i] = newline
+
+    i_enu = np.where([l.startswith('\\begin{enumerate}') for l in ftext])[0]  # start indices for enumerate environments
+    enums_to_clean = []  # to save info on things that we will clean out later
+    bad_enum_line_starts = ['\\begin{','\setcounter','\def','\end{']  # these line starts indicate likely not an actual item
+    for i in range(len(i_enu)):  # loop enums and see if they are likely headers, extract headers if so
+        item_inds = []
+        j = i_enu[i]
+        while True:
+            if ftext[j].startswith('\end{enumerate}'):
+                break
+            if ftext[j].strip().startswith('\item'):
+                item_inds.append(j)
+            j += 1
+        if len(item_inds) == 1:  # likely a mis-enumerated heading if only one item in list
+            tc_dict = {'row_low':i_enu[i],'row_high':j}  # bounds on enumrated environment
+            # case 1: \item line has the item actually on that line
+            if ftext[item_inds[0]].strip() != '\item':  # more than just the tag
+                tc_dict['irow_keep'] = item_inds[0]  # this is the row we care about
+
+            # case 2: \item line is just \item, actual item is somewhere after that line but we don't know how far after
+            elif ftext[item_inds[0]].strip() == '\item':
+            # case 2a: \item is followed directly by the item that goes with it
+                for k in range(item_inds[0]+1,j):  # loop the rows starting right after item
+                    if np.any([ftext[k].strip().startswith(l) for l in bad_enum_line_starts]):  # prob not item
+                        pass
+                    else:  # hopefully item?
+                        tc_dict['irow_keep'] = k
+            enums_to_clean.append(tc_dict)
+
+    # actually clean out all these enumerate things by first cleaning up the "keep" rows, then deleting the unneccessary ones
+    good_enum_rows = np.array([a['irow_keep'] for a in enums_to_clean])
+    for i in good_enum_rows:
+        if ftext[i].strip().startswith('\item'):  # clean off item tag if present
+            ftext[i] = ftext[i].split('\item')[-1]
+        if ftext[i].strip().startswith('\\textbf{'):   # clean off bold formatting
+            pass  # TODO TODO TODO stopped here
+
+    # also clean out texorpdfstring, why not
+
+    # rewrite! overwrite!!
+    return
+
+
 def document_structure(ftex_in):
     """
     read through entire pandoc'd file and extract outline, with line numbers for
