@@ -227,6 +227,8 @@ for key in bib_new:  # loop entry keys
                 print('no author found! available keys are:')
                 print(entry.keys())
                 akey = input('enter a key to use for author: ') or entry.keys()[0]
+                if akey not in entry.keys():
+                    akey = entry.keys()[0]  # fallback for typos
                 entry['author'] = entry[akey]
             parser = bbl.Parser()  # need to re-parse to get field_pos right in Entry
             parsed = parser.parse(entry.to_bib())
@@ -237,13 +239,17 @@ for key in bib_new:  # loop entry keys
 
         # for each, reformat key to be what we will look for in inline citations
         # first, count authors: if >2, key is firstauthorEAYYYY, if 2 or less is author(author)YYYY
-        if len(entry.authors()) > 2:
-            newkey = auth0 + 'EA' + entry['year']
-        elif len(entry.authors()) == 2:
-            auth1 = re.sub(r'[ ]',r'',entry.authors()[1].last.lstrip('{').rstrip('}'))
-            newkey = auth0 + auth1 + entry['year']
-        elif len(entry.authors()) == 1:
-            newkey = auth0 + entry['year']
+        try:
+            if len(entry.authors()) > 2:
+                newkey = auth0 + 'EA' + entry['year']
+            elif len(entry.authors()) == 2:
+                auth1 = re.sub(r'[ ]',r'',entry.authors()[1].last.lstrip('{').rstrip('}'))
+                newkey = auth0 + auth1 + entry['year']
+            elif len(entry.authors()) == 1:
+                newkey = auth0 + entry['year']
+        except:
+            newkey = auth0+"_messykey"
+            print(newkey)
         newkey = newkey.replace(" ","")  # get rid of spaces if there are any (like van Keken or something)
         newkey = newkey.replace("-","")  # get rid of hyphens, which tex2jats doesn't like
         nextletter = 'a'
