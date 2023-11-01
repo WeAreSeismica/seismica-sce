@@ -63,6 +63,7 @@ bib_new = OrderedDict()         # to save entries with DOIs added
 for key in bib_OD:  # loop entry keys
     entry = bib_OD[key]
     doi = None   # to start, assume no doi
+    print('\nWorking on ', entry)
     if 'doi' in entry.keys(): # get provided doi if present, check to make sure it will work
         if entry['doi'][-1] == '.':             # check if doi ends with . and if it does, get rid of the .
             entry['doi'] = entry['doi'][:-1]    # (this is sometimes an anystyle problem)
@@ -83,6 +84,7 @@ for key in bib_OD:  # loop entry keys
             doi = None  # url is not actually a good DOI link
 
     if not doi:  # try querying crossref to get a doi
+        print('no DOI, querying crossref to try and find one')
         try:
             q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
                         limit=2,select='DOI,title,author,score,type,published',sort='score')
@@ -113,6 +115,7 @@ for key in bib_OD:  # loop entry keys
                     doi = q0['doi']
 
     if doi:  # if doi not none, use to query for a clean citation
+        print('DOI provided/obtained, checking for cleaner citation into')
         ourl = scu.make_doi_url(doi)
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
@@ -132,8 +135,8 @@ for key in bib_OD:  # loop entry keys
             rereparse = False
             # first check if there are author list inconsistencies, see if we want old or new list
             if 'author' in entry_new.keys() and 'author' in entry.keys():
-                if len(entry.authors()) != len(entry_new.authors()) or \
-                        re.search(r'[^\.a-zA-Z, -]',entry_new['author']):  # TODO this needs work - say which criterion was hit
+                if len(entry.authors()) != len(entry_new.authors()): #or \
+                        #re.search(r'[^\.a-zA-Z, -]',entry_new['author']):  # TODO this needs work - say which criterion was hit
                     print('\nchecking '+entry.key+' author list: ')
                     print('old: %s' % entry['author'])
                     print('new: %s' % entry_new['author'])
@@ -147,7 +150,7 @@ for key in bib_OD:  # loop entry keys
 
             # next check if there are title inconsistencies (easier to check tbh)
             if 'title' in entry_new.keys() and 'title' in entry.keys():
-                if entry['title'] != entry_new['title']:
+                if entry['title'].lower() != entry_new['title'].lower():  # case is not as important
                     print('\nchecking '+entry.key+' title: ')
                     print('old: %s' % entry['title'])
                     print('new: %s' % entry_new['title'])
@@ -216,8 +219,11 @@ for key in bib_new:  # loop entry keys
         if len(entry['note']) <= 3:  # if we've only got 3 characters left or less, probably nothing
             _ = entry.pop('note')  # should take care of case with : at the end
 
-    if entry['title'].endswith("'"):
+    if 'title' in entry.keys() and entry['title'].endswith("'"):
         entry['title'] = entry['title'][:-1]  # remove trailing apostrophe if present
+
+    if 'title' not in entry.keys():
+        entry['title'] = " "  # TODO is this a good workaround?
 
     if not args.keepkeys:  # if we want to make new entry keys (docx/odt input file)
         if 'author' not in entry.keys():  # our key convention is based on authors and years
