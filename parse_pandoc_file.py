@@ -401,7 +401,8 @@ while True:
         for t in temp:
             #print(figcap)
             if t.startswith(r'\caption') and tag in figcap:
-                ftex_out.write(r'\caption{%s}\n' % figcap[tag])
+                ftex_out.write(r'\caption{%s}' % figcap[tag])
+                ftex_out.write('\n')
             else:
                 ftex_out.write(t)
 
@@ -417,7 +418,8 @@ while True:
 
         for t in temp:
             if t.startswith(r'\caption') and tag in tabcap:
-                ftex_out.write(r'\caption{%s}\n' % tabcap[tag])
+                ftex_out.write(r'\caption{%s}' % tabcap[tag])
+                ftex_out.write('\n')
             else:
                 ftex_out.write(t)
 
