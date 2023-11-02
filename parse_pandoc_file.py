@@ -106,7 +106,7 @@ else:  # hopefully the title is the first line after begin{document}
 # read in author info (names, affiliations, email for corresponding if applicable)
 while True:  # read up to where authors start
     line = ftex_in.readline()
-    if line != '\n' and not line.startswith('\maketitle'):
+    if line != '\n' and not line.startswith(r'\maketitle'):
         break  # author names, prior to affiliations
 authors = {}  # read author names and superscripts for affiliations
 for i,bit in enumerate(line.split('}')[:-1]):
@@ -145,7 +145,7 @@ while True:
         for k in authors.keys():
             if '*' in authors[k]['supers']:
                 authors[k]['corresp'] = email.rstrip()
-    elif line.startswith('\hypertarget') or line.startswith('\section'):  # hopefully not \section
+    elif line.startswith(r'\hypertarget') or line.startswith(r'\section'):  # hopefully not \section
         break  # stop at the start of a section
 
 # remove asterisk from superscripts once email address is found (if * is superscripted)
@@ -167,7 +167,7 @@ for i in range(struct[orcid_key]['line']+1):
 while True:
     line = ftex_in.readline()
     if line != '\n':  # there is something to parse
-        if line.startswith('\hypertarget') or line.startswith('\section'):
+        if line.startswith(r'\hypertarget') or line.startswith(r'\section'):
             break
         # figure out who the author is, locate in author dict
         orcid_claimed = False
@@ -187,7 +187,7 @@ credits = {}
 while True:
     line = ftex_in.readline()
     if line != '\n':
-        if line.startswith('\hypertarget') or line.startswith('\section'):
+        if line.startswith(r'\hypertarget') or line.startswith(r'\section'):
             break
         key = line.split(':')[0]
         vals = line.split(':')[1].lstrip().rstrip()
@@ -203,7 +203,7 @@ summaries = {}; scount = 0
 abst = ""
 while True:
     line = ftex_in.readline()
-    if not line.startswith('\hypertarget'):
+    if not line.startswith(r'\hypertarget'):
         abst = abst + line.rstrip()  # this will probably be just one line(/one paragraph)
     else:                            # but there can be multi-paragraph abstracts
         break
@@ -212,26 +212,27 @@ scount += 1
 
 other_langs = []
 # deal with the second-language abstract  if there is one
-if line.startswith('\hypertarget{second-language-abstract'):
+if line.startswith(r'\hypertarget{second-language-abstract'):
     ftex_in, line, abs2_dict = ut.get_abstract(ftex_in) # this function reads up to the
     other_langs.append(abs2_dict['language'])                 # next \hypertarget
     summaries[scount] = abs2_dict
     scount += 1
 
 # deal with the third-language abstract  if there is one
-if line.startswith('\hypertarget{third-language-abstract'):
+if line.startswith(r'\hypertarget{third-language-abstract'):
     ftex_in, line, abs3_dict = ut.get_abstract(ftex_in)
     other_langs.append(abs3_dict['language'])
     summaries[scount] = abs3_dict
     scount += 1
 
+print('here')
 # parse (English-language) non-technical summary if present
-if line.startswith('\hypertarget{non-technical-summary'):
+if line.startswith(r'\hypertarget{non-technical-summary'):
     line = ftex_in.readline()  # get past \section
     nontech = ""
     while True:
         line = ftex_in.readline()
-        if not line.startswith('\hypertarget'):
+        if not line.startswith(r'\hypertarget'):
             nontech = nontech + line.rstrip()
         else:
             break
@@ -255,10 +256,10 @@ while not goto_end:
         line = ftex_in.readline()
     else:
         first_line = False
-    if line.startswith('\end{document}'): # this is the end, stop reading
+    if line.startswith(r'\end{document}'): # this is the end, stop reading
         break  # shouldn't hit this unless there is no reference section
 
-    if line.startswith('\hypertarget'):  # the next line will be a section heading
+    if line.startswith(r'\hypertarget'):  # the next line will be a section heading
         lower_section = line.split('{')[1].split('}')[0]
         line = ftex_in.readline()  # actual section line
         stype = line.split('{')[0]
@@ -278,20 +279,23 @@ while not goto_end:
             ftex_out.write('%s{%s}\n' % (stype,sname))
 
     else:  # not a section header, so parse as a line and deal with citations or math or whatever
-        if line.startswith('\(') or line.startswith('\['):  # possibly an equation
+        if line.startswith(r'\(') or line.startswith(r'\['):  # possibly an equation
             print(line[:-1])
             iq = input('is this an equation? [y]/n: ') or 'y'
             sw = line[:2]
-            if sw[1] == '(': ew = '\)'
-            if sw[1] == '[': ew = '\]'
+            if sw[1] == '(': ew = r'\)'
+            if sw[1] == '[': ew = r'\]'
             if iq.lower() == 'y':
                 # scrape off the \( and \) bits since we're putting this in an environment
                 line = line.split(sw)[1].split(ew)[0]
-                ftex_out.write('\\begin{equation}\n')
+                ftex_out.write(r'\begin{equation}')
+                ftex_out.write('\n')
                 ftex_out.write(line)
                 ftex_out.write('\n')
-                ftex_out.write('\label{eq%i}\n' % nequ)
-                ftex_out.write('\end{equation}\n')
+                ftex_out.write(r'\label{eq%i}' % nequ)
+                ftex_out.write('\n')
+                ftex_out.write(r'\end{equation}')
+                ftex_out.write('\n')
                 nequ += 1
             else:
                 print('ok, writing line plain, then')
@@ -301,13 +305,19 @@ while not goto_end:
             ftex_in, ftex_out, fjunk, nequ, nfig, ntab, itype = \
                     ut.parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab)
 
-        elif line.startswith('\includegraphics'):
-            ftex_out.write('\\begin{figure*}[ht!]\n')
-            ftex_out.write('\centering\n')
-            ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
-            ftex_out.write('\caption{\\textcolor{red}{placeholder caption}}\n')
-            ftex_out.write('\label{fig%i}\n' % nfig)
-            ftex_out.write('\end{figure*}\n')
+        elif line.startswith(r'\includegraphics'):
+            ftex_out.write(r'\begin{figure*}[ht!]')
+            ftex_out.write('\n')
+            ftex_out.write(r'\centering')
+            ftex_out.write('\n')
+            ftex_out.write(r'\includegraphics[width = \\textwidth]{figure%i}' % nfig)
+            ftex_out.write('\n')
+            ftex_out.write(r'\caption{\\textcolor{red}{placeholder caption}}')
+            ftex_out.write('\n')
+            ftex_out.write(r'\label{fig%i}' % nfig)
+            ftex_out.write('\n')
+            ftex_out.write(r'\end{figure*}')
+            ftex_out.write('\n')
             print('figure found; moving original line to junk file')
             fjunk.write('Figure %i\n' % nfig)
             fjunk.write(line)
@@ -358,9 +368,12 @@ while not goto_end:
 
             ftex_out.write(to_write)    # finally, write the line
 
+print(line)
 
-ftex_out.write('\\bibliography{%s}\n' % bibtex.split('/')[-1].split('.')[0])
-ftex_out.write('\end{document}')
+
+ftex_out.write(r'\bibliography{%s}' % bibtex.split('/')[-1].split('.')[0])
+ftex_out.write('\n')
+ftex_out.write(r'\end{document}')
 
 ftex_in.close()
 ftex_out.close()
@@ -373,41 +386,43 @@ ftex_out = open(tex_out,'w')
 beg_doc = False
 while True:
     line = ftex_in.readline()
-    if line.startswith('\\begin{document}'): beg_doc = True
-    if line.startswith('\\begin{figure'):
+    if line.startswith(r'\begin{document}'): beg_doc = True
+    if line.startswith(r'\begin{figure'):
+        print(line)
         temp = [line]
         while True:
             line = ftex_in.readline()
             temp.append(line)
-            if line.startswith('\label'):
-                tag = line.split('\label{')[1].split('}')[0]
-            if line.startswith('\end{'):
+            if line.startswith(r'\label'):
+                tag = line.split(r'\label{')[1].split('}')[0]
+            if line.startswith(r'\end{'):
                 break
 
         for t in temp:
             #print(figcap)
-            if t.startswith('\caption') and tag in figcap:
-                ftex_out.write('\caption{%s}\n' % figcap[tag])
+            if t.startswith(r'\caption') and tag in figcap:
+                ftex_out.write(r'\caption{%s}\n' % figcap[tag])
             else:
                 ftex_out.write(t)
 
-    elif line.startswith('\\begin{table'):
+    elif line.startswith(r'\begin{table'):
         temp = [line]
         while True:
             line = ftex_in.readline()
             temp.append(line)
-            if line.startswith('\label'):
-                tag = line.split('\label{')[1].split('}')[0]
-            if line.startswith('\end{table'):  # can't be \end{tabular}
+            if line.startswith(r'\label'):
+                tag = line.split(r'\label{')[1].split('}')[0]
+            if line.startswith(r'\end{table'):  # can't be \end{tabular}
                 break
 
         for t in temp:
-            if t.startswith('\caption') and tag in tabcap:
-                ftex_out.write('\caption{%s}\n' % tabcap[tag])
+            if t.startswith(r'\caption') and tag in tabcap:
+                ftex_out.write(r'\caption{%s}\n' % tabcap[tag])
             else:
                 ftex_out.write(t)
 
-    elif line.startswith('\end{document'):
+    elif line.startswith(r'\end{document'):
+        print(line)
         ftex_out.write(line)
         break
     else:

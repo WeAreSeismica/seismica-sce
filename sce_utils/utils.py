@@ -18,7 +18,7 @@ def clean_enumerates(ifile_name):
 
     # look through lines for things that could be headers but aren't clearly marked via pandoc
     # to look for: \textbf{} that is the whole line, no more no less; \enumerate{} with one \item
-    i_tbf = np.where([l.startswith('\\textbf{') for l in ftext])[0]  # indices of lines in ftext starting with \textbf{
+    i_tbf = np.where([l.startswith(r'\textbf{') for l in ftext])[0]  # indices of lines in ftext starting with \textbf{
     for i in i_tbf:
         isfig = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
         istab = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
@@ -27,26 +27,26 @@ def clean_enumerates(ifile_name):
             newline = '[SECTION HEADER level unknown] {' + newline + '}'
             ftext[i] = newline
 
-    i_enu = np.where([l.startswith('\\begin{enumerate}') for l in ftext])[0]  # start indices for enumerate environments
+    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0]  # start indices for enumerate environments
     enums_to_clean = []  # to save info on things that we will clean out later
-    bad_enum_line_starts = ['\\begin{','\setcounter','\def','\end{']  # these line starts indicate likely not an actual item
+    bad_enum_line_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']  # these line starts indicate likely not an actual item
     for i in range(len(i_enu)):  # loop enums and see if they are likely headers, extract headers if so
         item_inds = []
         j = i_enu[i]
         while True:
-            if ftext[j].startswith('\end{enumerate}'):
+            if ftext[j].startswith(r'\end{enumerate}'):
                 break
-            if ftext[j].strip().startswith('\item'):
+            if ftext[j].strip().startswith(r'\item'):
                 item_inds.append(j)
             j += 1
         if len(item_inds) == 1:  # likely a mis-enumerated heading if only one item in list
             tc_dict = {'row_low':i_enu[i],'row_high':j}  # bounds on enumrated environment
             # case 1: \item line has the item actually on that line
-            if ftext[item_inds[0]].strip() != '\item':  # more than just the tag
+            if ftext[item_inds[0]].strip() != r'\item':  # more than just the tag
                 tc_dict['irow_keep'] = item_inds[0]  # this is the row we care about
 
             # case 2: \item line is just \item, actual item is somewhere after that line but we don't know how far after
-            elif ftext[item_inds[0]].strip() == '\item':
+            elif ftext[item_inds[0]].strip() == r'\item':
             # case 2a: \item is followed directly by the item that goes with it
                 for k in range(item_inds[0]+1,j):  # loop the rows starting right after item
                     if np.any([ftext[k].strip().startswith(l) for l in bad_enum_line_starts]):  # prob not item
@@ -58,9 +58,9 @@ def clean_enumerates(ifile_name):
     # actually clean out all these enumerate things by first cleaning up the "keep" rows, then deleting the unneccessary ones
     good_enum_rows = np.array([a['irow_keep'] for a in enums_to_clean])
     for i in good_enum_rows:
-        if ftext[i].strip().startswith('\item'):  # clean off item tag if present
-            ftext[i] = ftext[i].split('\item')[-1]
-        if ftext[i].strip().startswith('\\textbf{'):   # clean off bold formatting
+        if ftext[i].strip().startswith(r'\item'):  # clean off item tag if present
+            ftext[i] = ftext[i].split(r'\item')[-1]
+        if ftext[i].strip().startswith(r'\textbf{'):   # clean off bold formatting
             pass  # TODO TODO TODO stopped here
 
     # also clean out texorpdfstring, why not
@@ -85,7 +85,7 @@ def document_structure(ftex_in):
     j = 0  # section heading counter
     while i < nln:
         line = ftex_in.readline()
-        if line.startswith('\hypertarget'):  # next line will be section heading
+        if line.startswith(r'\hypertarget'):  # next line will be section heading
             i += 1
             line = ftex_in.readline()  # this will be the heading
             if line.split('{')[1][0].isdigit():
@@ -97,13 +97,13 @@ def document_structure(ftex_in):
                     'line':i}
             struct[j] = sect
             j += 1
-        elif line.startswith('\\begin{document}'):
+        elif line.startswith(r'\begin{document}'):
             sect = {'sname':'begin_doc',\
                     'level': 0,\
                     'line': i}
             struct['b'] = sect
-        elif line.startswith('\\title{'):
-            sect = {'sname':line.split('\\title{')[-1].rstrip('}\n'),\
+        elif line.startswith(r'\title{'):
+            sect = {'sname':line.split(r'\title{')[-1].rstrip('}\n'),\
                     'level':-1,\
                     'line':i}
             struct['ti'] = sect
@@ -119,7 +119,7 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
     while True:
         line = ftex_in.readline()
         temp.append(line)
-        if line.startswith('\end{'):
+        if line.startswith(r'\end{'):
             break
     if len(temp) < 10:
         for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
@@ -129,13 +129,14 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
     ieq = input('is this an [e]quation, [f]igure, [t]able, or [n]one of the above?') or 'n' # ask if it looks like an equation
     print('\n')
     if ieq.lower() == 'e':  # if it does, parse it like one
-        ftex_out.write('\\begin{equation}\n')
+        ftex_out.write(r'\begin{equation}')
+        ftex_out.write('\n')
         for k in range(0,len(temp)):  # this only matters if someone puts their equations in tables
-            if temp[k].startswith('\\toprule') or temp[k].startswith('\endhead')\
-                or temp[k].startswith('\\bottomrule') or temp[k].startswith('\end{')\
-                or temp[k].startswith('\\begin{longtable'):
+            if temp[k].startswith(r'\toprule') or temp[k].startswith(r'\endhead')\
+                or temp[k].startswith(r'\bottomrule') or temp[k].startswith(r'\end{')\
+                or temp[k].startswith(r'\begin{longtable'):
                 pass
-            elif temp[k].startswith('\('):  # probably the start of the equation
+            elif temp[k].startswith(r'\('):  # probably the start of the equation
                 if '&' in temp[k]:
                     goodpart = temp[k].split('&')[0].rstrip()  # get rid of 2nd column (if table)
                     ftex_out.write(goodpart[2:-2]+'\n')
@@ -143,17 +144,25 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
                     ftex_out.write(temp[k][2:-2]+'\n') # strip the \( part?
             else:
                 ftex_out.write(temp[k])  # split lines? who knows?
-        ftex_out.write('\label{eq%i}\n' % nequ)  # label the equation for tex reference
-        ftex_out.write('\end{equation}\n')
+        ftex_out.write(r'\label{eq%i}' % nequ)  # label the equation for tex reference
+        ftex_out.write('\n')
+        ftex_out.write(r'\end{equation}')
+        ftex_out.write('\n')
         nequ += 1  # increment the equation counter
 
     elif ieq.lower() == 'f':
-        ftex_out.write('\\begin{figure*}[ht!]\n')
-        ftex_out.write('\centering\n')
-        ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
-        ftex_out.write('\caption{placeholder caption}\n')
-        ftex_out.write('\label{fig%i}\n' % nfig)
-        ftex_out.write('\end{figure*}\n')
+        ftex_out.write(r'\begin{figure*}[ht!]')
+        ftex_out.write('\n')
+        ftex_out.write(r'\centering')
+        ftex_out.write('\n')
+        ftex_out.write(r'\includegraphics[width = \textwidth]{figure%i}' % nfig)
+        ftex_out.write('\n')
+        ftex_out.write(r'\caption{placeholder caption}')
+        ftex_out.write('\n')
+        ftex_out.write(r'\label{fig%i}' % nfig)
+        ftex_out.write('\n')
+        ftex_out.write(r'\end{figure*}')
+        ftex_out.write('\n')
         print('moving this environment to junk file; sort it out manually\n')
         fjunk.write('Figure %i\n' % nfig)
         for k in temp:
@@ -222,18 +231,19 @@ def reformat_table(temp,ntab):
     out_tab = pretab + tabstart
     for l in good_rows:
         out_tab += l
-    out_tab += """\end{tabular}
+    out_tab += r"""\end{tabular}
 \end{center}
 \caption{placeholder caption}
 \label{tbl%i}
-\end{table*}\n""" % ntab
+\end{table*}""" % ntab
+    out_tab += "\n"
 
     return out_tab
 
 
 def check_href_make_url(to_write):
     """
-    check a line for \href{} (and also un-wrapped URLS?) and try to fix them
+    check a line for href{} (and also un-wrapped URLS?) and try to fix them
     """
     out_write = ""
     # check for href and fix if present
@@ -382,7 +392,7 @@ def author_aliases(orcid_name,author_name):
     return match
 
 
-nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$',\
+nonasc = {'−':r'\textendash','≤':r'$\leq$','≥':r'$\geq$','μ':r'$\mu$','°':r'$^\circ$',\
             'ö':'ö','é':'é','é':'é','ć':'ć'}
 
 def check_non_ascii(line):
@@ -428,12 +438,12 @@ def get_abstract(ftex_in):
     abs2 = ''
     while True:
         line = ftex_in.readline()
-        if line.startswith('\section'):
+        if line.startswith(r'\section'):
             hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
             abs2_dict['name'] = hdr.split('(')[0].rstrip()
             abs2_dict['language'] = hdr.split('(')[-1].split(')')[0].lower()
         else:
-            if not line.startswith('\hypertarget'):  # until we hit the next section
+            if not line.startswith(r'\hypertarget'):  # until we hit the next section
                 abs2 = abs2 + line.rstrip()
             else:
                 break 
@@ -455,7 +465,7 @@ def print_reminders(ofile_tex):
 
 def parse_parentheticals(line,bibkeys):
     """
-    for a line of text, parse parentheticals for citations and replace with appropriate \cite calls
+    for a line of text, parse parentheticals for citations and replace with appropriate cite calls
     """
     to_write = ''  # for appending pieces of text as they're checked
     if '(' in line:  # check for parentheticals
@@ -556,7 +566,7 @@ def _parse_paren(paren, pretext, bibkeys):
         return '('+paren+')', pretext
 
     # quick cleaning for \emph{et al.} in case someone used an unauthorized ref format
-    paren = re.sub('\\\emph{et al.}','et al.',paren)
+    paren = re.sub(r'\\emph{et al.}','et al.',paren)
 
     # split up the parenthetical by spaces -> this will have all punctuation preserved
     paren = paren.split(' ')
@@ -615,7 +625,7 @@ def _parse_paren(paren, pretext, bibkeys):
 
         # having read through all possible years in this year-only parenthetical, 
         # compile citation and return
-        parsed = '\citet{'
+        parsed = r'\citet{'
         parsed += ', '.join(citations)  # add on citations and separators
         parsed += '}'  # remove trailing comma and space, close the bracket
 
@@ -681,7 +691,7 @@ def _parse_paren(paren, pretext, bibkeys):
                 citations.append(test_cite+'a')
 
     if len(badtext) != 0:
-        badtext = ' \\textcolor{red}{NOTE ' + badtext + '}'
+        badtext = r' \textcolor{red}{NOTE ' + badtext + '}'
     # combine citations into \citep, including preamble if there is one
     if len(citations) == 0:  # we failed to parse anything here :(
         if len(badtext) != 0 and is_abamb: 
@@ -690,9 +700,9 @@ def _parse_paren(paren, pretext, bibkeys):
             parsed = '(' + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
     else:
         if is_preamble:
-            parsed = '\citep[%s][]{' % preamble_text
+            parsed = r'\citep[%s][]{' % preamble_text
         else:
-            parsed = '\citep{'
+            parsed = r'\citep{'
         parsed += ', '.join(citations)
         parsed += '}'
 
