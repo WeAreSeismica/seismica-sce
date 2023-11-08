@@ -234,7 +234,7 @@ if line.lower().startswith(r'\section{second language abs'):
             break 
         #abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
     abs2_dict['text'] = abs2
-    other_langs.append(abs2_dict['language'])                 # next \hypertarget
+    other_langs.append(abs2_dict['language']) 
     summaries[scount] = abs2_dict
     scount += 1
 
@@ -252,7 +252,7 @@ if line.lower().startswith(r'\section{third language abs'):
         else:
             break 
     abs3_dict['text'] = abs3
-    other_langs.append(abs3_dict['language'])                 # next \hypertarget
+    other_langs.append(abs3_dict['language'])
     summaries[scount] = abs3_dict
     scount += 1
 
@@ -277,36 +277,31 @@ ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils
 # add abstract(s) after header
 ftex_out = tt.add_abstracts(ftex_out,summaries)
 
-
 ########################################################################
 # go through the rest of the sections! and deal with citations, figures, and equations
 
 goto_end = False   # flag to stop reading/writing at references section
 first_line = True  # abstract reading stopped at a section header, so don't read past that
 while not goto_end:
-    if not first_line:  # for when we already read the \hypertarget to get to the end of the abs.
+    if not first_line:  # for when we already read the \section to get to the end of the abs.
         line = ftex_in.readline()
     else:
         first_line = False
     if line.startswith(r'\end{document}'): # this is the end, stop reading
         break  # shouldn't hit this unless there is no reference section
 
-    if line.startswith(r'\hypertarget'):  # the next line will be a section heading
-        lower_section = line.split('{')[1].split('}')[0]
-        line = ftex_in.readline()  # actual section line
+    if re.match(r"\\(?:(sub){0,3})section",line):  # this is a section heading
         stype = line.split('{')[0]
-        if lower_section in special_section_names:
-            sname = line.split('{')[1].split('}')[0]
+        sname = line.split('{')[1].split('}')[0].strip()
+        if sname.lower() in special_section_names:
             stype = stype + '*'
-        elif lower_section in skip_sections:  # skip everything past "References"
+        elif sname.lower() in skip_sections:  # skip everything past "References"
             goto_end = True
         else:
             # check if there *is* a leading number
-            lead_num = ' '.join(line.split('{')[1].split('}')[0][0])
+            lead_num = line.split('{')[1].split('}')[0].strip()[0]
             if lead_num.isdigit():
                 sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])  # strip leading number
-            else:
-                sname = line.split('{')[1].split('}')[0]  # no number, just heading
         if sname != '' and not goto_end:
             ftex_out.write('%s{%s}\n' % (stype,sname))
 
@@ -370,8 +365,8 @@ while not goto_end:
             to_write = ut.non_breaking_space(to_write)
 
             # a few last checks for special cases:
-            regex_figcap = bool(re.match(r'^Figure [1-9]{1,2}[\.:]',to_write))  # try to match lines that are promising but missing bold tag
-            regex_tabcap = bool(re.match(r'^Table [1-9]{1,2}[\.:]',to_write))
+            regex_figcap = bool(re.match(r'^Figure~\\ref{fig[0-9]{1,2}}[\.:]',to_write))  # try to match lines that are promising but missing bold tag
+            regex_tabcap = bool(re.match(r'^Table~\\ref{tbl[0-9]{1,2}}[\.:]',to_write))
             start_figcap = to_write.lstrip().startswith('\\textbf{Figure')
             start_tabcap = to_write.lstrip().startswith('\\textbf{Table')
             if start_figcap or start_tabcap or regex_figcap or regex_tabcap: # likely a caption
@@ -380,28 +375,25 @@ while not goto_end:
                 if iq.lower() == 'y':  # save in caption dict, don't write here
                     cap = '\\ref{'.join(to_write.split('\\ref{')[1:]).rstrip()  # no trailing \n
                     tag = cap.split('}')[0]
-                    if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'):
-                        splits = to_write.split(tag)
-                        test = splits[1][2:].lstrip()
-                        if test.startswith('}'):
-                            test = test[1:].lstrip()
-                        if len(splits) > 2:
-                            fullcap = tag.join(np.append(test,splits[2:]))
-                        else:
-                            fullcap = test
-                        if start_figcap or regex_figcap:
-                            figcap[tag] = fullcap.lstrip().rstrip()
-                        elif start_tabcap or regex_tabcap:
-                            tabcap[tag] = fullcap.lstrip().rstrip()
+                    #if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'):
+                    splits = to_write.split(tag)
+                    test = splits[1][2:].lstrip()
+                    if test.startswith('}'):
+                        test = test[1:].lstrip()
+                    if len(splits) > 2:
+                        fullcap = tag.join(np.append(test,splits[2:]))
+                    else:
+                        fullcap = test
+                    if start_figcap or regex_figcap:
+                        figcap[tag] = fullcap.lstrip().rstrip()
+                    elif start_tabcap or regex_tabcap:
+                        tabcap[tag] = fullcap.lstrip().rstrip()
                     to_write = ''
 
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
                 ftex_out.write('\\noindent \n')   # are probably continuing sentences after eqns
 
             ftex_out.write(to_write)    # finally, write the line
-
-print(line)
-
 
 ftex_out.write(r'\bibliography{%s}' % bibtex.split('/')[-1].split('.')[0])
 ftex_out.write('\n')
@@ -411,7 +403,8 @@ ftex_in.close()
 ftex_out.close()
 fjunk.close()
 
-# reread to put in figure captions
+########################################################################
+# reread temp tex file to put in figure captions
 ftex_in = open(tex_mid,'r')  # open intermediate file
 ftex_out = open(tex_out,'w')
 
@@ -420,7 +413,6 @@ while True:
     line = ftex_in.readline()
     if line.startswith(r'\begin{document}'): beg_doc = True
     if line.startswith(r'\begin{figure'):
-        print(line)
         temp = [line]
         while True:
             line = ftex_in.readline()
