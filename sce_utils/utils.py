@@ -89,7 +89,7 @@ def first_pandoc_clean(ifile,ofile):
             elif re.findall(r'\\(?:(sub){0,3})section',line):  # section is in this line
                 q = list(re.finditer(r'\\(?:(sub){0,3})section',line))
                 line = line[q[0].start():]  # slice to where the section tag starts
-        if re.match(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
+        if re.findall(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
             line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag
 
         # if a (sub)section line, check for ending labels and strip them off
@@ -97,6 +97,11 @@ def first_pandoc_clean(ifile,ofile):
             q = list(re.finditer(r'\\label{(.*?)}',line))
             line = line[:q[0].start()]
 
+        # check for excess brackets
+        if re.match(r"\\(?:(sub){0,3})section",line):
+            line = re.sub(r"{{",r"{",line)
+            line = re.sub(r"}}",r"}",line)
+                
         if not skipline:
             ftex_out.write(line)
             ftex_out.write('\n')
@@ -121,10 +126,8 @@ def document_structure(ftex_in):
     j = 0  # section heading counter
     while i < nln:
         line = ftex_in.readline()
-        if line.startswith(r'\hypertarget'):  # next line will be section heading
-            i += 1
-            line = ftex_in.readline()  # this will be the heading
-            if line.split('{')[1][0].isdigit():
+        if re.match(r'\\(?:(sub){0,3})section',line):  # section header
+            if line.split('{')[1].strip()[0].isdigit():  # try to remove numbering
                 sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])
             else:
                 sname = line.split('{')[1].split('}')[0]
