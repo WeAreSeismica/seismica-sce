@@ -68,6 +68,42 @@ def clean_enumerates(ifile_name):
     # rewrite! overwrite!!
     return
 
+def first_pandoc_clean(ifile,ofile):
+    """ clean some specific things out of pandoc file before looking for structure:
+    -> no more hypertargets, get rid of those lines
+    -> no more texorpdfstring, regex those out
+    write to an output file that will also be temp I suppose
+    """
+    ftex_in = open(ifile,'r')
+    ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
+    ftex_in.close()
+
+    ftex_out = open(ofile,'w')
+    for i in range(len(ftext)):  # loop lines, check, write if ok
+        line = ftext[i]
+        skipline = 0  # we intend to write this line
+        if line.startswith(r'\hypertarget'):
+            l1 = ftext[i+1]
+            if re.match(r'\\(?:(sub){0,3})section',l1):  # next line starts with section
+                skipline = 1  # we now intend to skip this line in favor of the next
+            elif re.findall(r'\\(?:(sub){0,3})section',line):  # section is in this line
+                q = list(re.finditer(r'\\(?:(sub){0,3})section',line))
+                line = line[q[0].start():]  # slice to where the section tag starts
+        if re.match(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
+            line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag
+
+        # if a (sub)section line, check for ending labels and strip them off
+        if re.match(r'\\(?:(sub){0,3})section',line) and re.findall(r"\\label{(.*?)}",line):
+            q = list(re.finditer(r'\\label{(.*?)}',line))
+            line = line[:q[0].start()]
+
+        if not skipline:
+            ftex_out.write(line)
+            ftex_out.write('\n')
+
+    ftex_out.close()
+
+    return
 
 def document_structure(ftex_in):
     """
