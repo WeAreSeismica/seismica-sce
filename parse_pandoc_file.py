@@ -310,7 +310,7 @@ while not goto_end:
             ftex_out.write('\n')
             ftex_out.write(r'\centering')
             ftex_out.write('\n')
-            ftex_out.write(r'\includegraphics[width = \\textwidth]{figure%i}' % nfig)
+            ftex_out.write(r'\includegraphics[width = \textwidth]{figure%i}' % nfig)
             ftex_out.write('\n')
             ftex_out.write(r'\caption{\\textcolor{red}{placeholder caption}}')
             ftex_out.write('\n')
