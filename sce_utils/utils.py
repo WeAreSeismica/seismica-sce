@@ -468,29 +468,6 @@ def check_non_ascii(line):
 
     return oline
 
-def get_abstract(ftex_in):
-    """
-    after finding second- or third-language abstract header, read and parse that abstract
-    return abstract text and dict with abstract info (language, heading)
-    """
-    abs2_dict = {}
-    abs2 = ''
-    while True:
-        line = ftex_in.readline()
-        if line.startswith(r'\section'):
-            hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
-            abs2_dict['name'] = hdr.split('(')[0].rstrip()
-            abs2_dict['language'] = hdr.split('(')[-1].split(')')[0].lower()
-        else:
-            if not line.startswith(r'\hypertarget'):  # until we hit the next section
-                abs2 = abs2 + line.rstrip()
-            else:
-                break 
-        #abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
-        abs2_dict['text'] = abs2
-
-    return ftex_in, line, abs2_dict
-
 def print_reminders(ofile_tex):
     print('An output tex file has been written at: %s' % ofile_tex)
     print('Unparsable table/figure info is in junk.tex')
