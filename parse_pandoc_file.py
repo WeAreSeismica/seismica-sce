@@ -19,7 +19,6 @@ import os, sys, re
     # Table and Figure captions start with the capitalized words 'Table' or 'Figure'
 # TODO:
     # finding ORCID and CRediT sections if not automatically ID'd
-    # scan for URLs, wrap with \url{} for line breaking
 ########################################################################
 
 ########################################################################
