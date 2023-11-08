@@ -384,10 +384,11 @@ while not goto_end:
                         fullcap = tag.join(np.append(test,splits[2:]))
                     else:
                         fullcap = test
+                    fullcap = fullcap.lstrip('.').strip() # strip accidental leading . and/or spaces
                     if start_figcap or regex_figcap:
-                        figcap[tag] = fullcap.lstrip().rstrip()
+                        figcap[tag] = fullcap
                     elif start_tabcap or regex_tabcap:
-                        tabcap[tag] = fullcap.lstrip().rstrip()
+                        tabcap[tag] = fullcap
                     to_write = ''
 
             elif to_write[0].islower():           # lines (paragraphs) that start with lowercase
