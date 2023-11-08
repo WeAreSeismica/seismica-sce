@@ -160,13 +160,25 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         temp.append(line)
         if line.startswith(r'\end{'):
             break
-    if len(temp) < 10:
-        for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
-    else:
-        for e in temp[:9]: print('\t',e[:-1])
 
-    ieq = input('is this an [e]quation, [f]igure, [t]able, or [n]one of the above?') or 'n' # ask if it looks like an equation
-    print('\n')
+    # check for some particular cases: if begin{equation} or {itemize}, assume it's probably ok
+    # and don't ask for user input
+    if re.match(r"\\begin{equation",temp[0]):
+        print("\tit's an equation, acting accordingly")
+        temp = temp[1:-1]  # skip the begin/end lines, will be re-added (bc of brackets case)
+        ieq = 'e'
+    elif re.match(r"\\begin{itemize",temp[0]):
+        print("\tit's an itemized list, acting accordingly")
+        ieq = 'm'
+    else:  # if not obvious, ask for user input
+        if len(temp) < 10:
+            for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
+        else:
+            for e in temp[:9]: print('\t',e[:-1])
+        ieq = input('is this an [e]quation, [f]igure, [t]able, ite[m]ized list, or [n]one of the above?') or 'n' # ask what it looks like
+        print('\n')
+
+    # write to file(s) accordingly
     if ieq.lower() == 'e':  # if it does, parse it like one
         ftex_out.write(r'\begin{equation}')
         ftex_out.write('\n')
@@ -210,16 +222,6 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         nfig += 1
 
     elif ieq.lower() == 't':
-        #ftex_out.write('\\begin{table}[h]\n')
-        #ftex_out.write('\centering\n')
-        #ftex_out.write('\\begin{tabular}{lc}\hline\n')
-        #ftex_out.write('\\textbf{Data type} & \\textbf{some numbers} \\\\ \hline \n')
-        #ftex_out.write('type 1 & 1 \\\\ \n')
-        #ftex_out.write('type 2 & 2 \\\\ \hline \n')
-        #ftex_out.write('\end{tabular}\n')
-        #ftex_out.write('\caption{placeholder caption}\n')
-        #ftex_out.write('\label{tbl%i}\n' % ntab)
-        #ftex_out.write('\end{table}\n')
         new_temp = reformat_table(temp,ntab)
         for k in new_temp:
             ftex_out.write(k)
@@ -229,6 +231,10 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
             fjunk.write(k)
         fjunk.write('\n')  # saving for later
         ntab += 1
+
+    elif ieq.lower() == 'm':
+        for k in temp:
+            ftex_out.write(k)
 
     else:
         print('moving this environment to junk file; sort it out manually\n')
