@@ -16,20 +16,11 @@ def clean_enumerates(ifile_name):
     ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
     ftex_in.close()
 
-    # look through lines for things that could be headers but aren't clearly marked via pandoc
-    # to look for: \textbf{} that is the whole line, no more no less; \enumerate{} with one \item
-    i_tbf = np.where([l.startswith(r'\textbf{') for l in ftext])[0]  # indices of lines in ftext starting with \textbf{
-    for i in i_tbf:
-        isfig = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
-        istab = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
-        if bool(re.match(r'^\\textbf\{[^{]*\}$',ftext[i].strip())) and not isfig and not istab:  # regex to see if these are likely headers
-            newline = re.findall(r'^\\textbf\{([^{]*)\}$',ftext[i].strip())[0]  # capture content of bold tag
-            newline = '[SECTION HEADER level unknown] {' + newline + '}'
-            ftext[i] = newline
-
-    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0]  # start indices for enumerate environments
+    # get starting indices for enumerate environments
+    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0] 
     enums_to_clean = []  # to save info on things that we will clean out later
-    bad_enum_line_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']  # these line starts indicate likely not an actual item
+    # list things that would indicate "bad" enumerate environments
+    bad_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']
     for i in range(len(i_enu)):  # loop enums and see if they are likely headers, extract headers if so
         item_inds = []
         j = i_enu[i]
@@ -44,18 +35,17 @@ def clean_enumerates(ifile_name):
             # case 1: \item line has the item actually on that line
             if ftext[item_inds[0]].strip() != r'\item':  # more than just the tag
                 tc_dict['irow_keep'] = item_inds[0]  # this is the row we care about
-
-            # case 2: \item line is just \item, actual item is somewhere after that line but we don't know how far after
+            # case 2: \item line is just \item, actual item is some unknown distance after that line
             elif ftext[item_inds[0]].strip() == r'\item':
-            # case 2a: \item is followed directly by the item that goes with it
                 for k in range(item_inds[0]+1,j):  # loop the rows starting right after item
-                    if np.any([ftext[k].strip().startswith(l) for l in bad_enum_line_starts]):  # prob not item
+                    if np.any([ftext[k].strip().startswith(l) for l in bad_starts]):  # prob not item
                         pass
                     else:  # hopefully item?
                         tc_dict['irow_keep'] = k
             enums_to_clean.append(tc_dict)
 
-    # actually clean out all these enumerate things by first cleaning up the "keep" rows, then deleting the unneccessary ones
+    # actually clean out all these enumerate things by first cleaning up the "keep" rows,
+    # and then deleting the unneccessary rows
     good_enum_rows = np.array([a['irow_keep'] for a in enums_to_clean])
     for i in good_enum_rows:
         if ftext[i].strip().startswith(r'\item'):  # clean off item tag if present
@@ -68,6 +58,57 @@ def clean_enumerates(ifile_name):
     # rewrite! overwrite!!
     return
 
+def first_pandoc_clean(ifile,ofile):
+    """ clean some specific things out of pandoc file before looking for structure:
+    -> no more hypertargets, get rid of those lines
+    -> no more texorpdfstring, regex those out
+    write to an output file that will also be temp I suppose
+    """
+    ftex_in = open(ifile,'r')
+    ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
+    ftex_in.close()
+
+    ftex_out = open(ofile,'w')
+    for i in range(len(ftext)):  # loop lines, check, write if ok
+        line = ftext[i]
+        skipline = 0  # we intend to write this line
+        if line.startswith(r'\hypertarget'):
+            l1 = ftext[i+1]
+            if re.match(r'\\(?:(sub){0,3})section',l1):  # next line starts with section
+                skipline = 1  # we now intend to skip this line in favor of the next
+            elif re.findall(r'\\(?:(sub){0,3})section',line):  # section is in this line
+                q = list(re.finditer(r'\\(?:(sub){0,3})section',line))
+                line = line[q[0].start():]  # slice to where the section tag starts
+        if re.findall(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
+            line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag
+
+        # if a (sub)section line, check for ending labels and strip them off
+        if re.match(r'\\(?:(sub){0,3})section',line) and re.findall(r"\\label{(.*?)}",line):
+            q = list(re.finditer(r'\\label{(.*?)}',line))
+            line = line[:q[0].start()]
+
+        # check for excess brackets
+        if re.match(r"\\(?:(sub){0,3})section",line):
+            line = re.sub(r"{{",r"{",line)
+            line = re.sub(r"}}",r"}",line)
+
+        # check if line is bold-formatted but not a fiture or table caption
+        # (which probably means it was a poorly formatted section header)
+        if re.match(r'^\\textbf\{[^{]*\}$',line.strip()):
+            isfig = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            istab = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            if not isfig and not istab:  # capture content of the tag and reformat
+                newline = re.findall(r'^\\textbf\{([^{]*)\}$',line.strip())[0]
+                newline = '[SECTION HEADER level unknown] {' + newline + '}'
+                line = newline
+
+        if not skipline:
+            ftex_out.write(line)
+            ftex_out.write('\n')
+
+    ftex_out.close()
+
+    return
 
 def document_structure(ftex_in):
     """
@@ -85,10 +126,8 @@ def document_structure(ftex_in):
     j = 0  # section heading counter
     while i < nln:
         line = ftex_in.readline()
-        if line.startswith(r'\hypertarget'):  # next line will be section heading
-            i += 1
-            line = ftex_in.readline()  # this will be the heading
-            if line.split('{')[1][0].isdigit():
+        if re.match(r'\\(?:(sub){0,3})section',line):  # section header
+            if line.split('{')[1].strip()[0].isdigit():  # try to remove numbering
                 sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])
             else:
                 sname = line.split('{')[1].split('}')[0]
@@ -121,13 +160,25 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         temp.append(line)
         if line.startswith(r'\end{'):
             break
-    if len(temp) < 10:
-        for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
-    else:
-        for e in temp[:9]: print('\t',e[:-1])
 
-    ieq = input('is this an [e]quation, [f]igure, [t]able, or [n]one of the above?') or 'n' # ask if it looks like an equation
-    print('\n')
+    # check for some particular cases: if begin{equation} or {itemize}, assume it's probably ok
+    # and don't ask for user input
+    if re.match(r"\\begin{equation",temp[0]):
+        print("\tit's an equation, acting accordingly")
+        temp = temp[1:-1]  # skip the begin/end lines, will be re-added (bc of brackets case)
+        ieq = 'e'
+    elif re.match(r"\\begin{itemize",temp[0]):
+        print("\tit's an itemized list, acting accordingly")
+        ieq = 'm'
+    else:  # if not obvious, ask for user input
+        if len(temp) < 10:
+            for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
+        else:
+            for e in temp[:9]: print('\t',e[:-1])
+        ieq = input('is this an [e]quation, [f]igure, [t]able, ite[m]ized list, or [n]one of the above?') or 'n' # ask what it looks like
+        print('\n')
+
+    # write to file(s) accordingly
     if ieq.lower() == 'e':  # if it does, parse it like one
         ftex_out.write(r'\begin{equation}')
         ftex_out.write('\n')
@@ -171,16 +222,6 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         nfig += 1
 
     elif ieq.lower() == 't':
-        #ftex_out.write('\\begin{table}[h]\n')
-        #ftex_out.write('\centering\n')
-        #ftex_out.write('\\begin{tabular}{lc}\hline\n')
-        #ftex_out.write('\\textbf{Data type} & \\textbf{some numbers} \\\\ \hline \n')
-        #ftex_out.write('type 1 & 1 \\\\ \n')
-        #ftex_out.write('type 2 & 2 \\\\ \hline \n')
-        #ftex_out.write('\end{tabular}\n')
-        #ftex_out.write('\caption{placeholder caption}\n')
-        #ftex_out.write('\label{tbl%i}\n' % ntab)
-        #ftex_out.write('\end{table}\n')
         new_temp = reformat_table(temp,ntab)
         for k in new_temp:
             ftex_out.write(k)
@@ -190,6 +231,10 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
             fjunk.write(k)
         fjunk.write('\n')  # saving for later
         ntab += 1
+
+    elif ieq.lower() == 'm':
+        for k in temp:
+            ftex_out.write(k)
 
     else:
         print('moving this environment to junk file; sort it out manually\n')
@@ -370,26 +415,36 @@ def author_aliases(orcid_name,author_name):
     we are implicitly assuming that authors will not fill in orcids using initials if there
         are co-authors with identical initials
     """
-    match = False  # assume the names do not match to start with
+    ismatch = False  # assume the names do not match to start with
+
+    # pre-emptively replace all hyphens with spaces (I don't think this will be a bad thing?)
+    author_name = re.sub(r'-',' ',author_name)
+    orcid_name = re.sub(r'-',' ',orcid_name)
 
     # naive check if the two match
     if author_name == orcid_name:
-        match = True
+        ismatch = True
 
     # if they don't, check if orcid_name is abbreviated at all
     else:
         orcid_given = orcid_name.split(' ')[0]
-        orcid_last = orcid_name.split(' ')[-1]
+        orcid_last = ' '.join(orcid_name.split(' ')[1:])
         if re.match(r'[A-Z]\.',orcid_given):  # given name is abbreviated, at least
+            # check if abbreviated first name plus orcid last name matches
+            auth_given = author_name.split(' ')[0]
+            auth_last = ' '.join(author_name.split(' ')[1:])
+            auth_first_abbrev = auth_given[0] + '. ' + auth_last
+            if auth_first_abbrev == orcid_name:
+                ismatch = True  # this case should catch some van den Ende-like names
+
             # get initials from author_name and compare sans .s
             orcid_init = ''.join(c for c in orcid_name if c.isupper())
             author_bits = author_name.split(' ')
             author_init = ''.join(c[0] for c in author_bits)  # hopefully this works even for
                                     # names like McDonald etc
-                                    # NOTE might fail for van den Something
             if orcid_init == author_init:
-                match = True
-    return match
+                ismatch = True
+    return ismatch
 
 
 nonasc = {'−':r'\textendash','≤':r'$\leq$','≥':r'$\geq$','μ':r'$\mu$','°':r'$^\circ$',\
@@ -428,29 +483,6 @@ def check_non_ascii(line):
     oline += line[ibad[j]+1:]
 
     return oline
-
-def get_abstract(ftex_in):
-    """
-    after finding second- or third-language abstract header, read and parse that abstract
-    return abstract text and dict with abstract info (language, heading)
-    """
-    abs2_dict = {}
-    abs2 = ''
-    while True:
-        line = ftex_in.readline()
-        if line.startswith(r'\section'):
-            hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
-            abs2_dict['name'] = hdr.split('(')[0].rstrip()
-            abs2_dict['language'] = hdr.split('(')[-1].split(')')[0].lower()
-        else:
-            if not line.startswith(r'\hypertarget'):  # until we hit the next section
-                abs2 = abs2 + line.rstrip()
-            else:
-                break 
-        #abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
-        abs2_dict['text'] = abs2
-
-    return ftex_in, line, abs2_dict
 
 def print_reminders(ofile_tex):
     print('An output tex file has been written at: %s' % ofile_tex)
