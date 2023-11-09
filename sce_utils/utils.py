@@ -16,20 +16,11 @@ def clean_enumerates(ifile_name):
     ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
     ftex_in.close()
 
-    # look through lines for things that could be headers but aren't clearly marked via pandoc
-    # to look for: \textbf{} that is the whole line, no more no less; \enumerate{} with one \item
-    i_tbf = np.where([l.startswith(r'\textbf{') for l in ftext])[0]  # indices of lines in ftext starting with \textbf{
-    for i in i_tbf:
-        isfig = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
-        istab = bool(re.match(r'^\\textbf\{Figure',ftext[i].strip()))
-        if bool(re.match(r'^\\textbf\{[^{]*\}$',ftext[i].strip())) and not isfig and not istab:  # regex to see if these are likely headers
-            newline = re.findall(r'^\\textbf\{([^{]*)\}$',ftext[i].strip())[0]  # capture content of bold tag
-            newline = '[SECTION HEADER level unknown] {' + newline + '}'
-            ftext[i] = newline
-
-    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0]  # start indices for enumerate environments
+    # get starting indices for enumerate environments
+    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0] 
     enums_to_clean = []  # to save info on things that we will clean out later
-    bad_enum_line_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']  # these line starts indicate likely not an actual item
+    # list things that would indicate "bad" enumerate environments
+    bad_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']
     for i in range(len(i_enu)):  # loop enums and see if they are likely headers, extract headers if so
         item_inds = []
         j = i_enu[i]
@@ -44,18 +35,17 @@ def clean_enumerates(ifile_name):
             # case 1: \item line has the item actually on that line
             if ftext[item_inds[0]].strip() != r'\item':  # more than just the tag
                 tc_dict['irow_keep'] = item_inds[0]  # this is the row we care about
-
-            # case 2: \item line is just \item, actual item is somewhere after that line but we don't know how far after
+            # case 2: \item line is just \item, actual item is some unknown distance after that line
             elif ftext[item_inds[0]].strip() == r'\item':
-            # case 2a: \item is followed directly by the item that goes with it
                 for k in range(item_inds[0]+1,j):  # loop the rows starting right after item
-                    if np.any([ftext[k].strip().startswith(l) for l in bad_enum_line_starts]):  # prob not item
+                    if np.any([ftext[k].strip().startswith(l) for l in bad_starts]):  # prob not item
                         pass
                     else:  # hopefully item?
                         tc_dict['irow_keep'] = k
             enums_to_clean.append(tc_dict)
 
-    # actually clean out all these enumerate things by first cleaning up the "keep" rows, then deleting the unneccessary ones
+    # actually clean out all these enumerate things by first cleaning up the "keep" rows,
+    # and then deleting the unneccessary rows
     good_enum_rows = np.array([a['irow_keep'] for a in enums_to_clean])
     for i in good_enum_rows:
         if ftext[i].strip().startswith(r'\item'):  # clean off item tag if present
@@ -101,7 +91,17 @@ def first_pandoc_clean(ifile,ofile):
         if re.match(r"\\(?:(sub){0,3})section",line):
             line = re.sub(r"{{",r"{",line)
             line = re.sub(r"}}",r"}",line)
-                
+
+        # check if line is bold-formatted but not a fiture or table caption
+        # (which probably means it was a poorly formatted section header)
+        if re.match(r'^\\textbf\{[^{]*\}$',line.strip()):
+            isfig = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            istab = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            if not isfig and not istab:  # capture content of the tag and reformat
+                newline = re.findall(r'^\\textbf\{([^{]*)\}$',line.strip())[0]
+                newline = '[SECTION HEADER level unknown] {' + newline + '}'
+                line = newline
+
         if not skipline:
             ftex_out.write(line)
             ftex_out.write('\n')
