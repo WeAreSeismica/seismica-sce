@@ -415,26 +415,36 @@ def author_aliases(orcid_name,author_name):
     we are implicitly assuming that authors will not fill in orcids using initials if there
         are co-authors with identical initials
     """
-    match = False  # assume the names do not match to start with
+    ismatch = False  # assume the names do not match to start with
+
+    # pre-emptively replace all hyphens with spaces (I don't think this will be a bad thing?)
+    author_name = re.sub(r'-',' ',author_name)
+    orcid_name = re.sub(r'-',' ',orcid_name)
 
     # naive check if the two match
     if author_name == orcid_name:
-        match = True
+        ismatch = True
 
     # if they don't, check if orcid_name is abbreviated at all
     else:
         orcid_given = orcid_name.split(' ')[0]
-        orcid_last = orcid_name.split(' ')[-1]
+        orcid_last = ' '.join(orcid_name.split(' ')[1:])
         if re.match(r'[A-Z]\.',orcid_given):  # given name is abbreviated, at least
+            # check if abbreviated first name plus orcid last name matches
+            auth_given = author_name.split(' ')[0]
+            auth_last = ' '.join(author_name.split(' ')[1:])
+            auth_first_abbrev = auth_given[0] + '. ' + auth_last
+            if auth_first_abbrev == orcid_name:
+                ismatch = True  # this case should catch some van den Ende-like names
+
             # get initials from author_name and compare sans .s
             orcid_init = ''.join(c for c in orcid_name if c.isupper())
             author_bits = author_name.split(' ')
             author_init = ''.join(c[0] for c in author_bits)  # hopefully this works even for
                                     # names like McDonald etc
-                                    # NOTE might fail for van den Something
             if orcid_init == author_init:
-                match = True
-    return match
+                ismatch = True
+    return ismatch
 
 
 nonasc = {'−':r'\textendash','≤':r'$\leq$','≥':r'$\geq$','μ':r'$\mu$','°':r'$^\circ$',\
