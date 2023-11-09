@@ -47,7 +47,7 @@ junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed 
 review = False  # switch for line numbers (and single-column format) - always off for production
 
 ########################################################################
-# set up files etc:
+# set up some things:
 # read bibtex, get list of keys for entries that we expect to find in the text
 parser = bbl.Parser()
 biblio = parser.parse(open(bibtex,'r'))
@@ -64,18 +64,18 @@ special_section_names = ['acknowledgements','acknowledgments',\
 skip_sections = ['references','bibliography']  # when we get to this header, skip to the end
 
 ########################################################################
-# start by cleaning some things, scraping overall structure,
-# and figuring out where the document itself starts
+# start by cleaning some elements we don't want, scraping overall structure,
+# and figuring out where the document starts after pandoc's added header
 
-# clean initial pandoc file for section headers
+# clean initial pandoc file for hypertarget, texorpdfstring, misplaced enumeration
 ut.first_pandoc_clean(tex_in,tex_premid)  # outputs "pandoc_cleaned.tex"
 
-# open cleaned pandoc file ('premid') and output file
+# open cleaned pandoc file ('premid') and output temp file ('mid')
 ftex_in = open(tex_premid,'r')
 ftex_out = open(tex_mid,'w')
-fjunk = open(junk_out,'w')
+fjunk = open(junk_out,'w')  # and junk file, where we will put things that aren't handled
 
-# get structural cues/line numbers for seeking sections later
+# get structural cues/line numbers for seeking some sections later
 _,struct = ut.document_structure(ftex_in)
 
 # determine which sections are ORCIDs and CRediT, make sure those are there
@@ -85,13 +85,14 @@ for k in struct.keys():
         orcid_key = k
     if struct[k]['sname'].lower().__contains__('author contributions'):
         credit_key = k
-    if struct[k]['sname'].lower() == 'abstract' and abs1_key < 0:  # specifically, the English-language one; should be first one found
+    if struct[k]['sname'].lower() == 'abstract' and abs1_key < 0:  # specifically, first/English abstract
         abs1_key = k
 
 assert orcid_key >= 0, 'Author ORCIDs section not found'
 assert credit_key >= 0, 'Author contributions section not found'
 assert abs1_key >= 0, 'Abstract not found'
 
+########################################################################
 # deal with title and authors
 # skip header stuff from pandoc that seismica.cls will replace, find manuscript title
 ftex_in.seek(0)
@@ -107,16 +108,18 @@ else:  # hopefully the title is the first line after begin{document} if not in \
         if line != '\n':
             break  # this should be the title, fingers crossed
     article_title = line.rstrip() # get the title text
-# if article title is bolded or emph'd, get rid of that
-if re.match(r"\\textbf{",article_title) or re.match(r"\\emph{",article_title):
-    article_title = re.findall(r"\\textbf{(.*?)}",article_title)[0]
+# if entire article title is bolded or emph'd, get rid of that formatting
+if re.match(r"\\textbf{(.*)}",article_title):  # need to match end bracket at end
+    article_title = re.findall(r"\\textbf{(.*)}",article_title)[0]
+if re.match(r"\\emph{(.*)}",article_title):
+    article_title = re.findall(r"\\emph{(.*)}",article_title)[0]
 
 # read in author info (names, affiliations, email for corresponding if applicable)
 while True:  # read up to where authors start
     line = ftex_in.readline()
     if line != '\n' and not line.startswith(r'\maketitle'):
         break  # author names, prior to affiliations
-authors = {}  # read author names and superscripts for affiliations
+authors = {}  # read author names and superscripts for affiliations, single line
 for i,bit in enumerate(line.split('}')[:-1]):
     bit2 = bit.split('\\textsuperscript{')
     nm = bit2[0].lstrip().rstrip()
@@ -132,12 +135,12 @@ for i,bit in enumerate(line.split('}')[:-1]):
 affils = {}  # read affiliations that go with those superscripts
 while True:
     line = ftex_in.readline()
-    if line.startswith('\\textsuperscript'):  # an affiliation
-        bits = line.split('}')
-        sp = bits[0].split('{')[1]
-        pl = bits[1].rstrip()
+    if line.startswith('\\textsuperscript'):  # is an affiliation
+        groups = re.findall(r"\\textsuperscript{([1-9*]{1,2})}(.*)",line)
+        sp = groups[0][0]
+        pl = groups[0][1].strip()
         try:
-            affils[int(sp)] = {'super':sp,'place':pl.lstrip().rstrip()}
+            affils[int(sp)] = {'super':sp,'place':pl}
         except ValueError:  # probably a superscript asterisk
             if sp == '*':
                 email = line.split(':')[-1].lstrip()
@@ -148,7 +151,7 @@ while True:
                 print('unknown afflitiation superscript; moving to junk')
                 fjunk.write(line)
                 fjunk.write('\n')
-    elif line.startswith('*'):  # corresponding author email address TODO emph tag, regex
+    elif line.startswith('*'):  # corresponding author email address
         email = line.split(':')[-1].lstrip()
         for k in authors.keys():
             if '*' in authors[k]['supers']:
