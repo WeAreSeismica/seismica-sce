@@ -36,7 +36,7 @@ assert os.path.isfile(tex_in),'input tex file does not exist'
 tex_out = args.ofile
 if tex_out == None:
     tex_out = tex_in[:-4] + '_corr.tex'
-    print('using %s for output file' % tex_out
+    print('using %s for output file' % tex_out)
 tex_premid = 'pandoc_cleaned.tex'
 tex_mid = 'temp.tex'
 junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed automatically
