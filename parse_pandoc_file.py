@@ -30,17 +30,13 @@ parser.add_argument('--ifile','-i',type=str,help='path to tex file from pandoc')
 parser.add_argument('--ofile','-o',type=str,help='path to output tex file')
 args = parser.parse_args()
 bibtex = args.bibfile
-if bibtex == None:
-    bibtex = input('Enter path to bibfile: ') or 'refs_corr.bib'
 assert os.path.isfile(bibtex),'bibfile does not exist'
 tex_in = args.ifile
-if tex_in == None:
-    tex_in = input('Enter path to pandoc tex file: ') or 'test_pandoc.tex'
 assert os.path.isfile(tex_in),'input tex file does not exist'
 tex_out = args.ofile
 if tex_out == None:
-    of1 = tex_in[:-4] + '_corr.tex'
-    tex_out = input('Enter path to output tex file, or use %s: ' % of1) or of1 
+    tex_out = tex_in[:-4] + '_corr.tex'
+    print('using %s for output file' % tex_out
 tex_premid = 'pandoc_cleaned.tex'
 tex_mid = 'temp.tex'
 junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed automatically
@@ -121,7 +117,7 @@ while True:  # read up to where authors start
         break  # author names, prior to affiliations
 authors = {}  # read author names and superscripts for affiliations, single line
 for i,bit in enumerate(line.split('}')[:-1]):
-    bit2 = bit.split('\\textsuperscript{')
+    bit2 = bit.split(r'\textsuperscript{')
     nm = bit2[0].lstrip().rstrip()
     if nm.startswith(','):
         nm = nm[1:].lstrip().rstrip()
@@ -135,7 +131,7 @@ for i,bit in enumerate(line.split('}')[:-1]):
 affils = {}  # read affiliations that go with those superscripts
 while True:
     line = ftex_in.readline()
-    if line.startswith('\\textsuperscript'):  # is an affiliation
+    if line.startswith(r'\textsuperscript'):  # is an affiliation
         groups = re.findall(r"\\textsuperscript{([1-9*]{1,2})}(.*)",line)
         sp = groups[0][0]
         pl = groups[0][1].strip()
@@ -341,7 +337,7 @@ while not goto_end:
             ftex_out.write('\n')
             ftex_out.write(r'\includegraphics[width = \textwidth]{figure%i}' % nfig)
             ftex_out.write('\n')
-            ftex_out.write(r'\caption{\\textcolor{red}{placeholder caption}}')
+            ftex_out.write(r'\caption{\textcolor{red}{placeholder caption}}')
             ftex_out.write('\n')
             ftex_out.write(r'\label{fig%i}' % nfig)
             ftex_out.write('\n')
@@ -366,16 +362,17 @@ while not goto_end:
             # rescan again to replace spaces for reference links with ~ (non-breaking)
             to_write = ut.non_breaking_space(to_write)
 
-            # a few last checks for special cases:
-            regex_figcap = bool(re.match(r'^Figure~\\ref{fig[0-9]{1,2}}[\.:]',to_write))  # try to match lines that are promising but missing bold tag
+            # a few last checks for special cases:  
+            # try to match lines that are caption-ish with or without bold tags
+            regex_figcap = bool(re.match(r'^Figure~\\ref{fig[0-9]{1,2}}[\.:]',to_write))
             regex_tabcap = bool(re.match(r'^Table~\\ref{tbl[0-9]{1,2}}[\.:]',to_write))
-            start_figcap = to_write.lstrip().startswith('\\textbf{Figure')
-            start_tabcap = to_write.lstrip().startswith('\\textbf{Table')
+            start_figcap = to_write.lstrip().startswith(r'\textbf{Figure')
+            start_tabcap = to_write.lstrip().startswith(r'\textbf{Table')
             if start_figcap or start_tabcap or regex_figcap or regex_tabcap: # likely a caption
                 print('\t'+to_write[:40])
                 iq = input('Is this a caption? [y]/n: ') or 'y'
                 if iq.lower() == 'y':  # save in caption dict, don't write here
-                    cap = '\\ref{'.join(to_write.split('\\ref{')[1:]).rstrip()  # no trailing \n
+                    cap = r'\ref{'.join(to_write.split(r'\ref{')[1:]).rstrip()  # no trailing \n
                     tag = cap.split('}')[0]
                     #if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'):
                     splits = to_write.split(tag)
@@ -407,7 +404,7 @@ ftex_out.close()
 fjunk.close()
 
 ########################################################################
-# reread temp tex file to put in figure captions
+# reread temp tex file ('mid') to put in figure captions and rewrite ('out')
 ftex_in = open(tex_mid,'r')  # open intermediate file
 ftex_out = open(tex_out,'w')
 
@@ -459,5 +456,9 @@ while True:
         
 ftex_in.close()
 ftex_out.close()
+
+## clean up some intermediate files
+os.remove(tex_premid)
+os.remove(tex_mid)
 
 ut.print_reminders(tex_out)
