@@ -8,7 +8,7 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 - [habanero](https://habanero.readthedocs.io/)
 - [dateutil](https://dateutil.readthedocs.io/en/stable/)
 - [biblib](https://github.com/WeAreSeismica/biblib) (NOT from conda or pip)
-- [pandoc](pandoc.org/)
+- [pandoc](https://pandoc.org/)
 - [anystyle](https://github.com/inukshuk/anystyle) or a web browser to access [anystyle.io](anystyle.io)
 
 A [conda](conda.io) environment is a nice way to set up the python dependencies. You could, for example, use these commands:
@@ -24,6 +24,7 @@ Note that biblib is not available through conda or pip (the one available from p
 To install anystyle locally on a linux machine, run:
 - `sudo apt install ruby-dev`
 - `sudo gem install anystyle-cli`
+Note that you will also need to have `make` installed on your system for this to work.
 
 Alternatively, you can use [docker](docker.com), with instructions provided below.
 
