@@ -195,13 +195,13 @@ for i in range(struct[credit_key]['line']+1):
     line = ftex_in.readline()  # read up to CRediT section
 
 # read from start of credit section to start of subsequent section
-credits = {}
+credit = {}
 for i in range(struct[credit_key]['line']+1,struct[credit_key+1]['line']):
     line = ftex_in.readline()
     if line != '\n':
         key = line.split(':')[0]
         vals = line.split(':')[1].lstrip().rstrip()
-        credits[key] = vals
+        credit[key] = vals
 
 # go to the abstract and start reading that stuff
 ftex_in.seek(0)
@@ -273,7 +273,7 @@ if line.lower().startswith(r'\section{non-technical summary'):
 
 
 # feed some info to the header setup code
-ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,credits=credits,\
+ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,credits=credit,\
             other_langs=other_langs)
 
 # add abstract(s) after header
