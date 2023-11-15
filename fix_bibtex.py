@@ -254,8 +254,8 @@ for key in bib_new:  # loop entry keys
             elif len(entry.authors()) == 1:
                 newkey = auth0 + entry['year']
         except:
-            newkey = auth0+"_messykey"
-            print(newkey)
+            newkey = auth0+"MessyKey"
+            print('problem with key: ',newkey)
         newkey = newkey.replace(" ","")  # get rid of spaces if there are any (like van Keken or something)
         newkey = newkey.replace("-","")  # get rid of hyphens, which tex2jats doesn't like
         nextletter = 'a'
@@ -271,6 +271,9 @@ for key in bib_new:  # loop entry keys
     # check if doi field is present
     if 'doi' in entry.keys() or 'DOI' in entry.keys():
         n_with_doi += 1
+        # escape any underscores that might be in DOIs for the sake of tex
+        # (only do this just before writing bc needs to be clean for queries)
+        entry['doi'] = re.sub(r'_',r'\_',entry['doi'])
     else:
         n_without_doi += 1
 
