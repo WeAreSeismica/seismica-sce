@@ -31,6 +31,7 @@ parser = ArgumentParser()
 parser.add_argument('--ifile','-i',type=str,help='path to input bib file')
 parser.add_argument('--ofile','-o',type=str,help='path to output bib file')
 parser.add_argument('--keepkeys','-k',action='store_true',help='flag to retain input bib entry keys for output')
+parser.add_argument('--nosearch','-n',action='store_true',help='flag to not do any crossref querying')
 args = parser.parse_args()
 
 in_bib = args.ifile
@@ -50,130 +51,133 @@ if os.path.isfile(out_bib):
 # Part 1: try to add DOIs (and nice metadata) to entries from input file
 ########################################################################
 
-# connection for querying, being polite for server priority
-cr = Crossref(mailto="tech@seismica.org",ua_string='Seismica SCE, seismica.org')  
-
 parser = bbl.Parser()  # parser for bibtex
 parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
-
 # get entries
 bib_OD = parsed.get_entries()   # returns collections.OrderedDict
-bib_new = OrderedDict()         # to save entries with DOIs added
 
-for key in bib_OD:  # loop entry keys
-    entry = bib_OD[key]
-    doi = None   # to start, assume no doi
-    print('\nWorking on ', entry)
-    if 'doi' in entry.keys(): # get provided doi if present, check to make sure it will work
-        if entry['doi'][-1] == '.':             # check if doi ends with . and if it does, get rid of the .
-            entry['doi'] = entry['doi'][:-1]    # (this is sometimes an anystyle problem)
-        doi = entry['doi']
-        ourl = scu.make_doi_url(doi)
-        req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
-        try:
-            bibtext = urlopen(req).read().decode('utf-8')
-        except HTTPError:
-            doi = None  # authors made a DOI mistake or anystyle messed up; try a search
+if not args.nosearch:
+    # connection for querying, being polite for server priority
+    cr = Crossref(mailto="tech@seismica.org",ua_string='Seismica SCE, seismica.org')  
 
-    # if url looks like a doi link and we don't have the doi already, try the url
-    if 'url' in entry.keys() and re.search(r"doi\.org",entry['url']) and not doi:
-        req = Request(entry['url'], headers=dict(Accept='application/x-bibtex'))
-        try:
-            bibtext = urlopen(req).read().decode('utf-8')
-        except HTTPError:
-            doi = None  # url is not actually a good DOI link
+    bib_new = OrderedDict()         # to save entries with DOIs added
 
-    if not doi:  # try querying crossref to get a doi
-        print('no DOI, querying crossref to try and find one')
-        try:
-            q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
-                        limit=2,select='DOI,title,author,score,type,published',sort='score')
-        except HTTPError:  # shouldn't happen, but if it does anyway we give up on this one
-            continue
-        except bbl.FieldError:  # probably no 'author' - might be 'editor'
-            # in this (pretty edge) case, just keep the entry as is and move on
-            entry_new = entry  # keep whatever the initial entry was
-            entry_new.key = key         # keep the input key for now
-            bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
-            continue
-        if q['message']['total-results'] > 0:  # TODO deal with case where exactly 1 result
-            q0 = scu.format_crossref_query(q, i=0)
-            print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
-            iok = scu.print_query_options(q0, i=0)
-            if iok.lower() == 'y':   # if it matches, save the doi
-                doi = q0['doi']
-            elif iok.lower() == 'n':
-                doi = None
-            elif iok.lower() == 'p':
-                q1 = scu.format_crossref_query(q, i=1)
-                iok = scu.print_query_options(q1, i=1)
+    for key in bib_OD:  # loop entry keys
+        entry = bib_OD[key]
+        doi = None   # to start, assume no doi
+        print('\nWorking on ', entry)
+        if 'doi' in entry.keys(): # get provided doi if present, check to make sure it will work
+            if entry['doi'][-1] == '.':             # check if doi ends with . and if it does, get rid of the .
+                entry['doi'] = entry['doi'][:-1]    # (this is sometimes an anystyle problem)
+            doi = entry['doi']
+            ourl = scu.make_doi_url(doi)
+            req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
+            try:
+                bibtext = urlopen(req).read().decode('utf-8')
+            except HTTPError:
+                doi = None  # authors made a DOI mistake or anystyle messed up; try a search
+
+        # if url looks like a doi link and we don't have the doi already, try the url
+        if 'url' in entry.keys() and re.search(r"doi\.org",entry['url']) and not doi:
+            req = Request(entry['url'], headers=dict(Accept='application/x-bibtex'))
+            try:
+                bibtext = urlopen(req).read().decode('utf-8')
+            except HTTPError:
+                doi = None  # url is not actually a good DOI link
+
+        if not doi:  # try querying crossref to get a doi
+            print('no DOI, querying crossref to try and find one')
+            try:
+                q = cr.works(query_bibliographic=entry['title'],query_author=entry['author'],\
+                            limit=2,select='DOI,title,author,score,type,published',sort='score')
+            except HTTPError:  # shouldn't happen, but if it does anyway we give up on this one
+                continue
+            except bbl.FieldError:  # probably no 'author' - might be 'editor'
+                # in this (pretty edge) case, just keep the entry as is and move on
+                entry_new = entry  # keep whatever the initial entry was
+                entry_new.key = key         # keep the input key for now
+                bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
+                continue
+            if q['message']['total-results'] > 0:  # TODO deal with case where exactly 1 result
+                q0 = scu.format_crossref_query(q, i=0)
+                print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
+                iok = scu.print_query_options(q0, i=0)
                 if iok.lower() == 'y':   # if it matches, save the doi
-                    doi = q1['doi']
+                    doi = q0['doi']
                 elif iok.lower() == 'n':
                     doi = None
                 elif iok.lower() == 'p':
-                    doi = q0['doi']
+                    q1 = scu.format_crossref_query(q, i=1)
+                    iok = scu.print_query_options(q1, i=1)
+                    if iok.lower() == 'y':   # if it matches, save the doi
+                        doi = q1['doi']
+                    elif iok.lower() == 'n':
+                        doi = None
+                    elif iok.lower() == 'p':
+                        doi = q0['doi']
 
-    if doi:  # if doi not none, use to query for a clean citation
-        print('DOI provided/obtained, checking for cleaner citation into')
-        ourl = scu.make_doi_url(doi)
-        req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
-        try:
-            bibtext = urlopen(req).read().decode('utf-8')
+        if doi:  # if doi not none, use to query for a clean citation
+            print('DOI provided/obtained, checking for cleaner citation into')
+            ourl = scu.make_doi_url(doi)
+            req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
+            try:
+                bibtext = urlopen(req).read().decode('utf-8')
 
-            # parse bibtex to an Entry and check to make sure all the main pieces are there
-            # we need this bc some metadata deposited with DOIs is imperfect in weird ways
-            parser = bbl.Parser()  # need a new parser every time which is annoying
-            parsed = parser.parse(bibtext)
-            key0 = list(parsed.get_entries().keys())[0]
-            entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
+                # parse bibtex to an Entry and check to make sure all the main pieces are there
+                # we need this bc some metadata deposited with DOIs is imperfect in weird ways
+                parser = bbl.Parser()  # need a new parser every time which is annoying
+                parsed = parser.parse(bibtext)
+                key0 = list(parsed.get_entries().keys())[0]
+                entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
 
-            # see if we need to fix/un-replace authors or titles
-            # this is a kind of patch for dealing with the odd formatting (tex escaping,
-            # html escaping) that occastionally shows up in the doi.org bibtex entries
-            rereparse = False
-            # first check if there are author list inconsistencies, see if we want old or new list
-            if 'author' in entry_new.keys() and 'author' in entry.keys():
-                if len(entry.authors()) != len(entry_new.authors()): #or \
-                        #re.search(r'[^\.a-zA-Z, -]',entry_new['author']):  # TODO this needs work - say which criterion was hit
-                    print('\nchecking '+entry.key+' author list: ')
-                    print('old: %s' % entry['author'])
-                    print('new: %s' % entry_new['author'])
-                    ika = input('keep (o)ld or [n]ew? >> ') or 'n'
-                    if ika == 'o':
-                        entry_new['author'] = entry['author']
-                        rereparse = True
-            elif 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
-                entry_new['author'] = entry['author']
-                rereparse = True
+                # see if we need to fix/un-replace authors or titles
+                # this is a kind of patch for dealing with the odd formatting (tex escaping,
+                # html escaping) that occastionally shows up in the doi.org bibtex entries
+                rereparse = False
+                # first check if there are author list inconsistencies, see if we want old or new list
+                if 'author' in entry_new.keys() and 'author' in entry.keys():
+                    if len(entry.authors()) != len(entry_new.authors()): #or \
+                            #re.search(r'[^\.a-zA-Z, -]',entry_new['author']):  # TODO this needs work - say which criterion was hit
+                        print('\nchecking '+entry.key+' author list: ')
+                        print('old: %s' % entry['author'])
+                        print('new: %s' % entry_new['author'])
+                        ika = input('keep (o)ld or [n]ew? >> ') or 'n'
+                        if ika == 'o':
+                            entry_new['author'] = entry['author']
+                            rereparse = True
+                elif 'author' not in entry_new.keys() and 'author' in entry.keys():  # avoid losing info
+                    entry_new['author'] = entry['author']
+                    rereparse = True
 
-            # next check if there are title inconsistencies (easier to check tbh)
-            if 'title' in entry_new.keys() and 'title' in entry.keys():
-                if entry['title'].lower() != entry_new['title'].lower():  # case is not as important
-                    print('\nchecking '+entry.key+' title: ')
-                    print('old: %s' % entry['title'])
-                    print('new: %s' % entry_new['title'])
-                    ikt = input('keep (o)ld or [n]ew? >> ') or 'n'
-                    if ikt == 'o':
-                        entry_new['title'] = entry['title']
-                        rereparse = True
-            elif 'title' not in entry_new.keys() and 'title' in entry.keys():
-                entry_new['title'] = entry['title']
-                rereparse = True
+                # next check if there are title inconsistencies (easier to check tbh)
+                if 'title' in entry_new.keys() and 'title' in entry.keys():
+                    if entry['title'].lower() != entry_new['title'].lower():  # case is not as important
+                        print('\nchecking '+entry.key+' title: ')
+                        print('old: %s' % entry['title'])
+                        print('new: %s' % entry_new['title'])
+                        ikt = input('keep (o)ld or [n]ew? >> ') or 'n'
+                        if ikt == 'o':
+                            entry_new['title'] = entry['title']
+                            rereparse = True
+                elif 'title' not in entry_new.keys() and 'title' in entry.keys():
+                    entry_new['title'] = entry['title']
+                    rereparse = True
 
-            if rereparse:  # info has been re-added, re-parse to reset field_pos
-                parser = bbl.Parser()
-                parsed = parser.parse(entry_new.to_bib())
-                entry_new = parsed.get_entries()[key0]
+                if rereparse:  # info has been re-added, re-parse to reset field_pos
+                    parser = bbl.Parser()
+                    parsed = parser.parse(entry_new.to_bib())
+                    entry_new = parsed.get_entries()[key0]
 
-        except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
+            except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
+                entry_new = entry  # keep whatever the initial entry was
+                            
+        else:  # no doi, from authors or from crossref
             entry_new = entry  # keep whatever the initial entry was
-                        
-    else:  # no doi, from authors or from crossref
-        entry_new = entry  # keep whatever the initial entry was
 
-    entry_new.key = key         # keep the input key for now
-    bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
+        entry_new.key = key         # keep the input key for now
+        bib_new[key] = entry_new    # as that should be unique, even from anystyle (a/b etc)
+else:
+    bib_new = bib_OD
 
 ########################################################################
 # Part 2: go through the new OrderedDict with "cleaner" entries and fix up as needed
