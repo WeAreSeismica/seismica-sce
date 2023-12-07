@@ -120,13 +120,12 @@ for key in bib_OD:  # loop entry keys
         req = Request(ourl, headers=dict(Accept='application/x-bibtex'))
         try:
             bibtext = urlopen(req).read().decode('utf-8')
-            pieces = bibtext.split('\n')  # get bibtex key that comes with the downloaded entry
-            key0 = pieces[0].split('{')[1].rstrip(',')
 
             # parse bibtex to an Entry and check to make sure all the main pieces are there
             # we need this bc some metadata deposited with DOIs is imperfect in weird ways
             parser = bbl.Parser()  # need a new parser every time which is annoying
             parsed = parser.parse(bibtext)
+            key0 = list(parsed.get_entries().keys())[0]
             entry_new = parsed.get_entries()[key0]  # keyed based on doi.org convention
 
             # see if we need to fix/un-replace authors or titles
