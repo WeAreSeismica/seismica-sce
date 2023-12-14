@@ -1,5 +1,6 @@
 import numpy as np
 from re import finditer, findall
+import dateutil.parser as dp
 import re
 import os, sys
 
@@ -96,7 +97,7 @@ def first_pandoc_clean(ifile,ofile):
         # (which probably means it was a poorly formatted section header)
         if re.match(r'^\\textbf\{[^{]*\}$',line.strip()):
             isfig = bool(re.match(r'^\\textbf\{Figure',line.strip()))
-            istab = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            istab = bool(re.match(r'^\\textbf\{Table',line.strip()))
             if not isfig and not istab:  # capture content of the tag and reformat
                 newline = re.findall(r'^\\textbf\{([^{]*)\}$',line.strip())[0]
                 newline = '[SECTION HEADER level unknown] {' + newline + '}'
@@ -751,8 +752,7 @@ def _test_test_cite(test_cite,bibkeys):
     is_badref = False
     is_abamb = False
 
-
-    if test_cite + 'a' not in bibkeys:
+    if test_cite + 'a' not in bibkeys:  # used to be test_cite.lower() for both but biblib preserves case now
         is_badref = True
     else:
         if test_cite + 'b' in bibkeys:
@@ -775,6 +775,78 @@ def _etal_and(bits):
         and_ind = np.where(and_ind)[0][0]
         bits = np.delete(bits,and_ind)
     return bits
+
+########################################################################
+# bibtex and crossref stuff
+########################################################################
+
+def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype','pdate'],i=0):
+    """ Format information (keys in ret) from a dict (q)
+    that is returned from a crossref query via habanero
+    """
+    out = {}
+    qi = q['message']['items'][i]
+    if 'title' in ret and 'title' in qi.keys():
+        out['title'] = qi['title'][0]
+    if 'doi' in ret and 'DOI' in qi.keys():
+        out['doi'] = qi['DOI']
+    if 'score' in ret and 'score' in qi.keys():
+        out['score'] = qi['score']
+    if 'type' in ret and 'type' in qi.keys():
+        out['type'] = qi['type']
+    if 'subtype' in ret and 'subtype' in qi.keys():
+        out['subtype'] = qi['subtype']
+    if 'pdate' in ret and 'published' in qi.keys():
+        if 'date-parts' in qi['published'].keys():
+            out['pdate'] = dp.parse('-'.join([str(e) for e in qi['published']['date-parts'][0]]))
+    if 'authors' in ret and 'author' in qi.keys():
+        auths = ''
+        for a in qi['author']:
+            if 'family' in a.keys() and 'given' in a.keys():
+                auths = auths + a['given'] + ' ' + a['family'] + ', '
+            elif 'name' in a.keys():
+                auths = auths + a['name'] + ', '
+        auths = auths[:-2]
+        out['auths'] = auths
+    return out
+
+def print_query_options(q0,i=0):
+    """ Take reformatted dict of query outputs and print relevant info,
+    ask for user input to decide whether the query returned a good match
+    Note: we're assuming title, authors, doi, and score will be in the output dict
+        (type not assumed)
+        this should usually be a good assumption? but could make more robust to keys
+        if it turns out to be an issue
+    """
+    print('received:\n\ttitle: %s\n\tby: %s\n\tdoi: %s\n\tscore: %.2f' % (q0['title'],\
+            q0['auths'], q0['doi'], q0['score']))
+    if 'pdate' in q0.keys():
+        print('\tyear: %i' % q0['pdate'].year)
+    if 'type' in q0.keys():
+        print('\ttype: %s' % q0['type'])
+    if 'subtype' in q0.keys():
+        print('\tsubtype: %s' % q0['subtype'])
+    if i == 0:
+        iok = input('accept this [y], reject query (n), or see next match (p): ') or 'y'
+    else:
+        iok = input('accept this [y], reject query (n), or use previous match (p): ') or 'y'
+    return iok
+
+def make_doi_url(doi,root='https://dx.doi.org/'):
+    """ Construct url for requesting bibtex based on doi
+    The only cleaning we do is to check if it ends with '. ' which I guess
+        would indicate poor scraping from a sentence termination
+    Some previous versions escaped certain characters (parens?) but that didn't
+        seem to be necessary
+    """
+    if doi.lstrip().lower().startswith('doi:'):
+        doi = doi.lstrip()[4:].lstrip()  # get rid of any doi: 10.etc syntax (old style)
+    if '. ' in doi:
+        ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
+    else:
+        ourl = "https://dx.doi.org/"+doi
+    return ourl
+
 
 ########################################################################
 # tex escaping for python

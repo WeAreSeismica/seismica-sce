@@ -20,6 +20,8 @@ RUN python3 -m pip install pip --upgrade --no-cache \
 	pip \
 	setuptools \
 	numpy \
+        habanero \
+        python-dateutil \
 	git+https://github.com/WeAreSeismica/biblib
 
 WORKDIR /data

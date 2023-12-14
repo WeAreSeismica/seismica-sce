@@ -5,13 +5,15 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 ## dependencies:
 - python 3.n (preferably 3.8+)
 - numpy
+- [habanero](https://habanero.readthedocs.io/)
+- [dateutil](https://dateutil.readthedocs.io/en/stable/)
 - [biblib](https://github.com/WeAreSeismica/biblib) (NOT from conda or pip)
 - [pandoc](https://pandoc.org/)
 - [anystyle](https://github.com/inukshuk/anystyle) or a web browser to access [anystyle.io](anystyle.io)
 
 A [conda](conda.io) environment is a nice way to set up the python dependencies. You could, for example, use these commands:
 
-- `conda create -n seismica numpy`
+- `conda create -n seismica numpy habanero python-dateutil`
 - `cd /path/to/put/biblib/files`
 - `git clone git@github.com:WeAreSeismica/biblib.git`
 - `conda activate seismica`
@@ -55,12 +57,12 @@ Alternatively, you can use [docker](docker.com), with instructions provided belo
     - running the anystyle gem locally: copy the text of the references into a plain text file (e.g. `refs.txt`) with one reference per line, and then run `anystyle -f bib parse refs.txt .` to generate the file `refs.bib` (filename will be the same as the input, with suffix replaced by .bib)
     - copy-pasting bibliography from docx/odt into anystyle.io, and copy-pasting the output into a new .bib file
 
-1. fix anystyle bibtex file year fields and keys, make a new .bib file
+1. fix anystyle bibtex file year fields and keys, make a new .bib file. This script will query crossref to try and add missing DOIs to references. Interactive prompts are used to check the results of crossref queries so as not to introduce errors.
     - `python3 -m fix_bibtex --ifile refs.bib --ofile refs_better.bib`
 
 1. parse the pandoc output tex file to a better tex format
     - `python3 -m parse_pandoc_file --bibfile refs_better.bib --ifile file_pandoc.tex --ofile file_better.tex`
-    - unparsed tables and other confusing text will go in `junk.tex`
+    - bits that can't be parsed automatically will go in `junk.tex`
     - `temp.tex` is used for intermediate stages of parsing
 
 1. make pdf by either:
@@ -77,14 +79,13 @@ Alternatively, you can use [docker](docker.com), with instructions provided belo
     - manually set options (breakmath, languages, report, etc) as necessary
     - manually link figure files (that the author uploaded separately) at the right sizes (1- or 2-column)
     - manually adjust for any citations that we couldn't parse (most should be marked in red, but some may have been missed altogether)
+    - manually adjust table formatting
     - add extra hyphenation rules for words latex doesn't know if columns are overfull
-    - manually wrap any urls in the text that weren't caught with \url{}
-    - look at junk file and manually reformat/place tables in text where they belong
+    - look at junk file and edit/replace any pieces that were not parsed
 
 ## TODO: 
 - multi-line equations in brackets/parens! These are a problem, they break the paren parsing.
 - print warning for references that start with special characters
-- figure out longtable/table parsing to seistable so we don't need to move things to junk
 - check for excess . at the beginnings of captions when bold formatting isn't perfect, and strip trailing newlines from captions (for tex2jats)
 - can we catch captions even when "Figure 1"/"Table 1" is *not* bold? They should be bold but are not always
 - check YYYYa/YYYYb citations
