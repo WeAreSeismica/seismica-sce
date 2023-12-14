@@ -97,7 +97,7 @@ def first_pandoc_clean(ifile,ofile):
         # (which probably means it was a poorly formatted section header)
         if re.match(r'^\\textbf\{[^{]*\}$',line.strip()):
             isfig = bool(re.match(r'^\\textbf\{Figure',line.strip()))
-            istab = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            istab = bool(re.match(r'^\\textbf\{Table',line.strip()))
             if not isfig and not istab:  # capture content of the tag and reformat
                 newline = re.findall(r'^\\textbf\{([^{]*)\}$',line.strip())[0]
                 newline = '[SECTION HEADER level unknown] {' + newline + '}'
