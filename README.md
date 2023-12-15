@@ -1,6 +1,6 @@
 # docx/odt parsing for Seismica
 
-These scripts are for converting docx/odt manuscript submissions into latex, specifically a tex file that will work with the Seismica latex submission template. The scripts are a bit janky and not completely tested, so if anything breaks or doesn't work, it's probably my fault, not yours.
+These scripts are for converting docx/odt manuscript submissions into latex, specifically a tex file that will work with the Seismica latex publication template. The scripts are a bit janky and not completely tested, so if anything breaks or doesn't work, it's probably my fault, not yours.
 
 ## dependencies:
 - python 3.n (preferably 3.8+)
@@ -13,11 +13,13 @@ These scripts are for converting docx/odt manuscript submissions into latex, spe
 
 A [conda](conda.io) environment is a nice way to set up the python dependencies. You could, for example, use these commands:
 
-- `conda create -n seismica numpy habanero python-dateutil`
-- `cd /path/to/put/biblib/files`
-- `git clone git@github.com:WeAreSeismica/biblib.git`
-- `conda activate seismica`
-- `pip install /path/to/put/biblib/files/biblib`
+```
+conda create -n seismica numpy habanero python-dateutil
+cd /path/to/put/biblib/files
+git clone git@github.com:WeAreSeismica/biblib.git
+conda activate seismica
+pip install /path/to/put/biblib/files/biblib
+```
 
 Note that biblib is not available through conda or pip (the one available from pip is not the same module), though it can be installed in a conda env by using pip with the downloaded source code. We use a fork of the original source code that has been updated for compatibility with Python 3.10+.
 
@@ -73,7 +75,7 @@ Alternatively, you can use [docker](docker.com), with instructions provided belo
         - `lualatex file_better.tex`
         - `lualatex file_better.tex`
             - running at least twice gives inline references a chance to sort themselves out
-    - The Seismica publication template is not publicly available. If you are testing out these scripts without it, try using the [Seismica submission template](https://github.com/WeAreSeismica/submission-template) (and pdflatex) instead. You will need to comment out some metadata macros in the document preamble - they will throw errors in the submission template.
+    - A snapshot of the Seismica publication template is available [on zenodo](https://doi.org/10.5281/zenodo.8147070). You can also try using the [Seismica submission template](https://github.com/WeAreSeismica/submission-template) (and pdflatex) instead. You will need to comment out some metadata macros in the document preamble - they will throw errors in the submission template.
 
 1. complete other tasks to fix the latex files:
     - manually set options (breakmath, languages, report, etc) as necessary
