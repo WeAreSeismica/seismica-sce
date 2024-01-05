@@ -228,6 +228,10 @@ for key in bib_new:  # loop entry keys
     if 'title' not in entry.keys():
         entry['title'] = " "  # TODO is this a good workaround?
 
+    if 'journal' in entry.keys():  # check for ampersands, regex them
+        entry['journal'] = re.sub(r" &amp; ",r" \& ",entry['journal'])  # misplaced xml
+        entry['journal'] = re.sub(r" & ",r" \& ",entry['journal'])  # and any others not escaped
+
     if not args.keepkeys:  # if we want to make new entry keys (docx/odt input file)
         if 'author' not in entry.keys():  # our key convention is based on authors and years
             if 'editor' in entry.keys():
