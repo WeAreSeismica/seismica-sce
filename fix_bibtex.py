@@ -48,13 +48,37 @@ if os.path.isfile(out_bib):
         sys.exit()
 
 ########################################################################
-# Part 1: try to add DOIs (and nice metadata) to entries from input file
+# Part 0: load entries, and check for trailing apostrophes
 ########################################################################
 
 parser = bbl.Parser()  # parser for bibtex
 parsed = parser.parse(open(in_bib,'r'))  # parse the input file with biblib
 # get entries
 bib_OD = parsed.get_entries()   # returns collections.OrderedDict
+
+# check if all the titles end with an apostrophe; if so, probably an error and they need to 
+# be removed (anystyle is not great with titles in quotes)
+last_char = np.array([bib_OD[key]['title'][-1] for key in bib_OD])
+strp_last = False
+lc = Counter(last_char)
+if max(lc.values()) >= len(last_char)/2:  # this is a red flag, most entries have the same end char
+    print('title trailing characters:')
+    for i,k in enumerate(lc.keys()):
+        print('[%i] %i instances of %s' % (i,lc[k],k))
+    irem = int(input('enter index to remove: ') or -1)
+    if irem >= 0: 
+        strp_last = True  # and we'll remove the one with that index in the keys list
+        char_out = list(lc.keys())[irem]
+
+if strp_last:  # remove trailing character if set to do so
+    for key in bib_OD:
+        entry = bib_OD[key]
+        if entry['title'].endswith(char_out):
+            entry['title'] = entry['title'][:-1]  # remove trailing apostrophe (probably)
+
+########################################################################
+# Part 1: try to add DOIs (and nice metadata) to entries from input file
+########################################################################
 
 if not args.nosearch:
     # connection for querying, being polite for server priority
@@ -101,7 +125,10 @@ if not args.nosearch:
             if q['message']['total-results'] > 0:  # TODO deal with case where exactly 1 result
                 q0 = scu.format_crossref_query(q, i=0)
                 print('\nqueried for:\ntitle: %s\nby: %s' % (entry['title'],entry['author']))
-                iok = scu.print_query_options(q0, i=0)
+                if q['message']['total-results'] == 1:
+                    iok = scu.print_query_options(q0, i=1)
+                else:
+                    iok = scu.print_query_options(q0, i=0)
                 if iok.lower() == 'y':   # if it matches, save the doi
                     doi = q0['doi']
                 elif iok.lower() == 'n':
