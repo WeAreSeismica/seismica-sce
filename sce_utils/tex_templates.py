@@ -1,8 +1,8 @@
-import os, sys, datetime
+import os, sys, datetime, re
 
 def set_up_header(fout,title,authors={},affils={},credits={},\
                   anon=False,langs=False,breakmath=False,preprint=False,\
-                  other_langs=[]):
+                  other_langs=[],manu='article'):
     """
     write out the basic seismica latex header
     fout is an open file handler ready for writing this header
@@ -13,6 +13,16 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     if langs: docops += 'languages,'
     if breakmath: docops += 'breakmath,'
     if preprint: docops += 'preprint,'
+
+    report_string = """% if a report, specify report type:
+"""
+    if re.search('report',manu.lower()):
+        report_string += """\\reportheader{""" + manu + """}"""
+        docops += 'report,'
+    else:
+        report_string += """%\\reportheader{Report Type Here}"""
+    if re.search('invited',manu.lower()): docops += 'invited,'
+    if re.search('opinion',manu.lower()): docops += 'opinion,'
     docops = docops[:-1]  # remove trailing comma
 
     header1 = """% Seismica Publication Template
@@ -23,14 +33,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % options: report, breakmath, proof, onecolumn, invited, opinion
 \documentclass["""+docops+"""]{seismica} 
-
-% if a report, specify report type:
-%\\reportheader{Fast Report}
-%\\reportheader{Null Results Report}
-%\\reportheader{Software Report}
-%\\reportheader{Instrument Deployment Report}
-%\\reportheader{Field Campaign Report}
-
+"""+report_string+"""
 % SCE team metadata:
 \dois{10.26443/seismica.v0i0.N}
 \\receiveddate{DATE HERE}
@@ -76,8 +79,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout.write('\n')
 
     if len(other_langs) > 0:
-        header2 = """\\setotherlanguages{
-"""
+        header2 = """\\setotherlanguages{"""
         for l in other_langs:
             header2 += '%s,' % l
         header2 = header2[:-1]

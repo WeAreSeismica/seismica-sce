@@ -75,7 +75,7 @@ fjunk = open(junk_out,'w')  # and junk file, where we will put things that aren'
 _,struct = ut.document_structure(ftex_in)
 
 # determine which sections are ORCIDs and CRediT, make sure those are there
-orcid_key = -1; credit_key = -1; abs1_key = -1
+orcid_key = -1; credit_key = -1; abs1_key = -1; manu_key = -1
 for k in struct.keys():
     if struct[k]['sname'].lower().__contains__('orcid'):
         orcid_key = k
@@ -83,10 +83,16 @@ for k in struct.keys():
         credit_key = k
     if struct[k]['sname'].lower() == 'abstract' and abs1_key < 0:  # specifically, first/English abstract
         abs1_key = k
+    if struct[k]['sname'].lower().__contains__('manuscript type'):
+        manu_key = k
 
 assert orcid_key >= 0, 'Author ORCIDs section not found'
 assert credit_key >= 0, 'Author contributions section not found'
 assert abs1_key >= 0, 'Abstract not found'
+if manu_key < 0:
+    print('Manuscript type not found; defaulting to Article')
+    print('Please check with HE to make sure this is not a report')
+    type_of_paper = 'Article'
 
 ########################################################################
 # deal with title and authors
@@ -199,6 +205,17 @@ for i in range(struct[credit_key]['line']+1,struct[credit_key+1]['line']):
         vals = line.split(':')[1].lstrip().rstrip()
         credit[key] = vals
 
+# if manuscript type is included (added circa March 2024), read that before dealing with abstract
+if manu_key > 0:
+    ftex_in.seek(0)
+    for i in range(struct[manu_key]['line']+1):
+        line = ftex_in.readline()  # read up to manuscript type "section"
+    for i in range(struct[manu_key]['line']+1,struct[manu_key+1]['line']):
+        line = ftex_in.readline()
+        if line != '\n':
+            type_of_paper = line.strip().strip(',')
+            break
+
 # go to the abstract and start reading that stuff
 ftex_in.seek(0)
 for i in range(struct[abs1_key]['line']+1):
@@ -270,7 +287,7 @@ if line.lower().startswith(r'\section{non-technical summary'):
 
 # feed some info to the header setup code
 ftex_out = tt.set_up_header(ftex_out,article_title,authors=authors,affils=affils,credits=credit,\
-            other_langs=other_langs)
+            other_langs=other_langs,manu=type_of_paper)
 
 # add abstract(s) after header
 ftex_out = tt.add_abstracts(ftex_out,summaries)
