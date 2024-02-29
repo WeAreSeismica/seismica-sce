@@ -1,9 +1,10 @@
 import biblib.bib as bbl
 import dateutil.parser as dp
 import sce_utils.utils as scu
+import numpy as np
 from habanero import Crossref
 from argparse import ArgumentParser
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 from urllib.request import Request, urlopen, HTTPError
 import os, sys, re
 
