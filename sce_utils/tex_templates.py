@@ -21,7 +21,9 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
         docops += 'report,'
     else:
         report_string += """%\\reportheader{Report Type Here}"""
-    if re.search('invited',manu.lower()): docops += 'invited,'
+    if re.search('invited',manu.lower()):
+        docops += 'invited,'
+        #manu = re.
     if re.search('opinion',manu.lower()): docops += 'opinion,'
     docops = docops[:-1]  # remove trailing comma
 
@@ -32,25 +34,25 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
 %! TEX encoding = UTF-8 Unicode
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % options: report, breakmath, proof, onecolumn, invited, opinion
-\documentclass["""+docops+"""]{seismica} 
+\\documentclass["""+docops+"""]{seismica} 
 """+report_string+"""
 % SCE team metadata:
-\dois{10.26443/seismica.v0i0.N}
+\\dois{10.26443/seismica.v0i0.N}
 \\receiveddate{DATE HERE}
 \\accepteddate{DATE HERE}
-\publisheddate{DATE HERE}
+\\publisheddate{DATE HERE}
 \\theyear{"""+str(datetime.datetime.now().year)+"""}
 \\thevolume{0}
 \\thenumber{0}
-\prodedname{the production editor}
-\handedname{the handling editor}
-\copyedname{the copy/layout editor}
+\\prodedname{the production editor}
+\\handedname{the handling editor}
+\\copyedname{the copy/layout editor}
 %\\reviewername{signed reviewer(s)}
 %\\translatorname{translator(s)}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \\title{"""+title+"""}
-\shorttitle{"""+title+"""}
+\\shorttitle{"""+title+"""}
 
 """
     fout.write(header1)
@@ -62,7 +64,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
         if ik > 0:
             towrite = towrite.replace(' ','~')
         if 'orcid' in auth.keys():
-            towrite += '\n\orcid{'+auth['orcid']+'}'
+            towrite += '\n\\orcid{'+auth['orcid']+'}'
         if 'corresp' in auth.keys():
             towrite += '\n\\thanks{Corresponding author: '+auth['corresp']+'}'
         towrite += '}\n'
@@ -75,7 +77,7 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     fout.write('\n')
 
     for k in credits.keys():
-        fout.write('\credit{'+k+'}{'+credits[k]+'}\n')
+        fout.write('\\credit{'+k+'}{'+credits[k]+'}\n')
     fout.write('\n')
 
     if len(other_langs) > 0:
@@ -84,9 +86,9 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
             header2 += '%s,' % l
         header2 = header2[:-1]
         header2 += """}\n
-%% Do not put arabic in \setotherlanguages{} as it is not supported by polyglossia
+%% Do not put arabic in \\setotherlanguages{} as it is not supported by polyglossia
 %% Instead, use these commands within the text:
-%%\\begin{Arabic} and \end{Arabic} around paragraphs in Arabic
+%%\\begin{Arabic} and \\end{Arabic} around paragraphs in Arabic
 %%\\n{} to wrap any digits within Arabic text that should read left-to-right
 %%\\textarabic{} for Arabic text embedded in a left-to-right paragraph
 
@@ -102,16 +104,16 @@ def add_abstracts(fout,summaries):
     write abstract(s) and optional non-technical summary into file after header
     """
     towrite = """
-\makeseistitle{\n"""
+\\makeseistitle{\n"""
     for k in summaries.keys():
         abst = summaries[k]
         toadd = ''
         if abst['language'] != 'English':
             toadd += "\\begin{%s}\n" % abst['language']
         toadd += "\\begin{summary}{%s}\n" % abst['name']
-        toadd += "%s\n\end{summary}\n" % abst['text']
+        toadd += "%s\n\\end{summary}\n" % abst['text']
         if abst['language'] != 'English':
-            toadd += "\end{%s}\n" % abst['language']
+            toadd += "\\end{%s}\n" % abst['language']
         towrite += toadd
 
     towrite += "}\n"
