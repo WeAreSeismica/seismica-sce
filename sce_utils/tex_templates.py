@@ -14,6 +14,13 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     if breakmath: docops += 'breakmath,'
     if preprint: docops += 'preprint,'
 
+    if re.search('invited',manu.lower()):
+        docops += 'invited,'
+        manu = re.sub(r'Invited',r'',manu)  # remove "invited" cap or non-cap from string
+        manu = re.sub(r'invited',r'',manu)  # bc it goes in docops
+        manu = manu.strip().strip(',')
+
+    # set up for report header if it's a report
     report_string = """% if a report, specify report type:
 """
     if re.search('report',manu.lower()):
@@ -21,10 +28,9 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
         docops += 'report,'
     else:
         report_string += """%\\reportheader{Report Type Here}"""
-    if re.search('invited',manu.lower()):
-        docops += 'invited,'
-        #manu = re.
+    # opinion is its own thing and is only in docops, no such thing as a "Fast Report Opinion" atm
     if re.search('opinion',manu.lower()): docops += 'opinion,'
+
     docops = docops[:-1]  # remove trailing comma
 
     header1 = """% Seismica Publication Template
