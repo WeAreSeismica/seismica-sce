@@ -225,7 +225,7 @@ for key in bib_new:  # loop entry keys
             entry['year'] = entry['date']
         else: # some other format, try to parse
             try:
-                try_year = dp.parse(entry['date']).year
+                try_year = str(dp.parse(entry['date']).year)
             except:  # unspecified error with dateutil parsing
                 try_year = entry['date']
             print('date is %s, year set to %s' % (entry['date'],try_year))

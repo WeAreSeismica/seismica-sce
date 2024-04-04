@@ -57,6 +57,7 @@ Alternatively, you can use [docker](docker.com), with instructions provided belo
 
 1. convert text bibliography into a .bib file by either:
     - running the anystyle gem locally: copy the text of the references into a plain text file (e.g. `refs.txt`) with one reference per line, and then run `anystyle -f bib parse refs.txt .` to generate the file `refs.bib` (filename will be the same as the input, with suffix replaced by .bib)
+        - note that anystyle will throw a processing error if the output file (default refs.bib) already exists
     - copy-pasting bibliography from docx/odt into anystyle.io, and copy-pasting the output into a new .bib file
 
 1. fix anystyle bibtex file year fields and keys, make a new .bib file. This script will query crossref to try and add missing DOIs to references. Interactive prompts are used to check the results of crossref queries so as not to introduce errors.
