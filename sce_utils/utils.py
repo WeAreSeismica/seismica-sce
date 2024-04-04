@@ -571,6 +571,7 @@ def parse_parentheticals(line,bibkeys):
 
         else:
             # if not math, continue to parse:
+            print(paren, pretext)
             parsed, pretext = _parse_paren(paren,pretext,bibkeys)
 
             # add the parsed stuff (pre-paren text may be altered for (YYYY) citations)
@@ -627,12 +628,17 @@ def _parse_paren(paren, pretext, bibkeys):
                 citations.append(test_cite + 'a')
                 pretext = ' '.join(pretext.split(' ')[:-2]) + ' '
             elif is_badref:
-                prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
-                test_cite = ''.join([prevprev,prev,paren[0][:4]])
-                is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
-                if not is_badref and not is_abamb:
-                    citations.append(test_cite + 'a')
-                    pretext = ' '.join(pretext.split(' ')[:-4]) + ' '
+                try:
+                    prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
+                    test_cite = ''.join([prevprev,prev,paren[0][:4]])
+                    is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                    if not is_badref and not is_abamb:
+                        citations.append(test_cite + 'a')
+                        pretext = ' '.join(pretext.split(' ')[:-4]) + ' '
+                except:  # something is not as expected, give up and highlight for later
+                    is_badref = True
+                    is_abamb = False
+    
 
         # if we couldn't parse this thing, return something to write to mark it
         if is_badref:
