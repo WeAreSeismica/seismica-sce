@@ -571,7 +571,6 @@ def parse_parentheticals(line,bibkeys):
 
         else:
             # if not math, continue to parse:
-            print(paren, pretext)
             parsed, pretext = _parse_paren(paren,pretext,bibkeys)
 
             # add the parsed stuff (pre-paren text may be altered for (YYYY) citations)
