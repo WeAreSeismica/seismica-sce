@@ -24,10 +24,10 @@ def set_up_header(fout,title,authors={},affils={},credits={},\
     report_string = """% if a report, specify report type:
 """
     if re.search('report',manu.lower()):
-        report_string += """\\reportheader{""" + manu + """}"""
+        report_string += """\\reporttype{""" + manu + """}"""
         docops += 'report,'
     else:
-        report_string += """%\\reportheader{Report Type Here}"""
+        report_string += """%\\reporttype{Report Type Here}"""
     # opinion is its own thing and is only in docops, no such thing as a "Fast Report Opinion" atm
     if re.search('opinion',manu.lower()): docops += 'opinion,'
 
