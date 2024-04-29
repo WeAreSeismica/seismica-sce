@@ -1,4 +1,5 @@
 import biblib.bib as bbl
+from biblib.messages import InputError
 import dateutil.parser as dp
 import sce_utils.utils as scu
 import numpy as np
@@ -196,8 +197,10 @@ if not args.nosearch:
                     parsed = parser.parse(entry_new.to_bib())
                     entry_new = parsed.get_entries()[key0]
 
-            except HTTPError:  # shouldn't hit this bc crossref dois should work, but who knows
+            except InputError:     # crossref returned text that biblib doesn't like to parse
                 entry_new = entry  # keep whatever the initial entry was
+            except HTTPError:      # this is some kind of crossref issue, maybe a bad DOI
+                entry_new = entry
                             
         else:  # no doi, from authors or from crossref
             entry_new = entry  # keep whatever the initial entry was
