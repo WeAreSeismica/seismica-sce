@@ -25,4 +25,13 @@ for bibitem in items:
         print('check your commas, brackets, parens, keys, etc')
         sys.exit()
 
-print('all good!')
+print('all individual entries are good!')
+print('trying to check for duplicate keys...')
+
+keys = [i.split('{')[1].split('\n')[0] for i in items]
+
+un,counts = np.unique(keys,return_counts=True)
+if np.any(counts > 1):
+    print('duplicated keys found:')
+    for k in un[counts>1]:
+        print(k)
