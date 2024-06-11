@@ -1,11 +1,115 @@
 import numpy as np
 from re import finditer, findall
+import dateutil.parser as dp
 import re
 import os, sys
 
 ####
 # functions for text processing of pandoc outputs
 ####
+
+def clean_enumerates(ifile_name):
+    """
+    read an entire pandoc file and clean out excess enumerates, mark them so we can find them
+    as section headings later
+    """
+    ftex_in = open(ifile_name,'r')
+    ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
+    ftex_in.close()
+
+    # get starting indices for enumerate environments
+    i_enu = np.where([l.startswith(r'\begin{enumerate}') for l in ftext])[0] 
+    enums_to_clean = []  # to save info on things that we will clean out later
+    # list things that would indicate "bad" enumerate environments
+    bad_starts = [r'\begin{',r'\setcounter',r'\def',r'\end{']
+    for i in range(len(i_enu)):  # loop enums and see if they are likely headers, extract headers if so
+        item_inds = []
+        j = i_enu[i]
+        while True:
+            if ftext[j].startswith(r'\end{enumerate}'):
+                break
+            if ftext[j].strip().startswith(r'\item'):
+                item_inds.append(j)
+            j += 1
+        if len(item_inds) == 1:  # likely a mis-enumerated heading if only one item in list
+            tc_dict = {'row_low':i_enu[i],'row_high':j}  # bounds on enumrated environment
+            # case 1: \item line has the item actually on that line
+            if ftext[item_inds[0]].strip() != r'\item':  # more than just the tag
+                tc_dict['irow_keep'] = item_inds[0]  # this is the row we care about
+            # case 2: \item line is just \item, actual item is some unknown distance after that line
+            elif ftext[item_inds[0]].strip() == r'\item':
+                for k in range(item_inds[0]+1,j):  # loop the rows starting right after item
+                    if np.any([ftext[k].strip().startswith(l) for l in bad_starts]):  # prob not item
+                        pass
+                    else:  # hopefully item?
+                        tc_dict['irow_keep'] = k
+            enums_to_clean.append(tc_dict)
+
+    # actually clean out all these enumerate things by first cleaning up the "keep" rows,
+    # and then deleting the unneccessary rows
+    good_enum_rows = np.array([a['irow_keep'] for a in enums_to_clean])
+    for i in good_enum_rows:
+        if ftext[i].strip().startswith(r'\item'):  # clean off item tag if present
+            ftext[i] = ftext[i].split(r'\item')[-1]
+        if ftext[i].strip().startswith(r'\textbf{'):   # clean off bold formatting
+            pass  # TODO TODO TODO stopped here
+
+    # also clean out texorpdfstring, why not
+
+    # rewrite! overwrite!!
+    return
+
+def first_pandoc_clean(ifile,ofile):
+    """ clean some specific things out of pandoc file before looking for structure:
+    -> no more hypertargets, get rid of those lines
+    -> no more texorpdfstring, regex those out
+    write to an output file that will also be temp I suppose
+    """
+    ftex_in = open(ifile,'r')
+    ftext = np.array(ftex_in.read().split('\n'))  # all lines all at once
+    ftex_in.close()
+
+    ftex_out = open(ofile,'w')
+    for i in range(len(ftext)):  # loop lines, check, write if ok
+        line = ftext[i]
+        skipline = 0  # we intend to write this line
+        if line.startswith(r'\hypertarget'):
+            l1 = ftext[i+1]
+            if re.match(r'\\(?:(sub){0,3})section',l1):  # next line starts with section
+                skipline = 1  # we now intend to skip this line in favor of the next
+            elif re.findall(r'\\(?:(sub){0,3})section',line):  # section is in this line
+                q = list(re.finditer(r'\\(?:(sub){0,3})section',line))
+                line = line[q[0].start():]  # slice to where the section tag starts
+        if re.findall(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
+            line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag
+
+        # if a (sub)section line, check for ending labels and strip them off
+        if re.match(r'\\(?:(sub){0,3})section',line) and re.findall(r"\\label{(.*?)}",line):
+            q = list(re.finditer(r'\\label{(.*?)}',line))
+            line = line[:q[0].start()]
+
+        # check for excess brackets
+        if re.match(r"\\(?:(sub){0,3})section",line):
+            line = re.sub(r"{{",r"{",line)
+            line = re.sub(r"}}",r"}",line)
+
+        # check if line is bold-formatted but not a fiture or table caption
+        # (which probably means it was a poorly formatted section header)
+        if re.match(r'^\\textbf\{[^{]*\}$',line.strip()):
+            isfig = bool(re.match(r'^\\textbf\{Figure',line.strip()))
+            istab = bool(re.match(r'^\\textbf\{Table',line.strip()))
+            if not isfig and not istab:  # capture content of the tag and reformat
+                newline = re.findall(r'^\\textbf\{([^{]*)\}$',line.strip())[0]
+                newline = '[SECTION HEADER level unknown] {' + newline + '}'
+                line = newline
+
+        if not skipline:
+            ftex_out.write(line)
+            ftex_out.write('\n')
+
+    ftex_out.close()
+
+    return
 
 def document_structure(ftex_in):
     """
@@ -23,10 +127,8 @@ def document_structure(ftex_in):
     j = 0  # section heading counter
     while i < nln:
         line = ftex_in.readline()
-        if line.startswith('\hypertarget'):  # next line will be section heading
-            i += 1
-            line = ftex_in.readline()  # this will be the heading
-            if line.split('{')[1][0].isdigit():
+        if re.match(r'\\(?:(sub){0,3})section',line):  # section header
+            if line.split('{')[1].strip()[0].isdigit():  # try to remove numbering
                 sname = ' '.join(line.split('{')[1].split('}')[0].split(' ')[1:])
             else:
                 sname = line.split('{')[1].split('}')[0]
@@ -35,13 +137,13 @@ def document_structure(ftex_in):
                     'line':i}
             struct[j] = sect
             j += 1
-        elif line.startswith('\\begin{document}'):
+        elif line.startswith(r'\begin{document}'):
             sect = {'sname':'begin_doc',\
                     'level': 0,\
                     'line': i}
             struct['b'] = sect
-        elif line.startswith('\\title{'):
-            sect = {'sname':line.split('\\title{')[-1].rstrip('}\n'),\
+        elif line.startswith(r'\title{'):
+            sect = {'sname':line.split(r'\title{')[-1].rstrip('}\n'),\
                     'level':-1,\
                     'line':i}
             struct['ti'] = sect
@@ -57,23 +159,36 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
     while True:
         line = ftex_in.readline()
         temp.append(line)
-        if line.startswith('\end{'):
+        if line.startswith(r'\end{'):
             break
-    if len(temp) < 10:
-        for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
-    else:
-        for e in temp[:9]: print('\t',e[:-1])
 
-    ieq = input('is this an [e]quation, [f]igure, [t]able, or [n]one of the above?') or 'n' # ask if it looks like an equation
-    print('\n')
+    # check for some particular cases: if begin{equation} or {itemize}, assume it's probably ok
+    # and don't ask for user input
+    if re.match(r"\\begin{equation",temp[0]):
+        print("\tit's an equation, acting accordingly")
+        temp = temp[1:-1]  # skip the begin/end lines, will be re-added (bc of brackets case)
+        ieq = 'e'
+    elif re.match(r"\\begin{itemize",temp[0]):
+        print("\tit's an itemized list, acting accordingly")
+        ieq = 'm'
+    else:  # if not obvious, ask for user input
+        if len(temp) < 10:
+            for e in temp: print('\t',e[:-1])  # skip newlines with [:-1]
+        else:
+            for e in temp[:9]: print('\t',e[:-1])
+        ieq = input('is this an [e]quation, [f]igure, [t]able, ite[m]ized list, or [n]one of the above?') or 'n' # ask what it looks like
+        print('\n')
+
+    # write to file(s) accordingly
     if ieq.lower() == 'e':  # if it does, parse it like one
-        ftex_out.write('\\begin{equation}\n')
+        ftex_out.write(r'\begin{equation}')
+        ftex_out.write('\n')
         for k in range(0,len(temp)):  # this only matters if someone puts their equations in tables
-            if temp[k].startswith('\\toprule') or temp[k].startswith('\endhead')\
-                or temp[k].startswith('\\bottomrule') or temp[k].startswith('\end{')\
-                or temp[k].startswith('\\begin{longtable'):
+            if temp[k].startswith(r'\toprule') or temp[k].startswith(r'\endhead')\
+                or temp[k].startswith(r'\bottomrule') or temp[k].startswith(r'\end{')\
+                or temp[k].startswith(r'\begin{longtable'):
                 pass
-            elif temp[k].startswith('\('):  # probably the start of the equation
+            elif temp[k].startswith(r'\('):  # probably the start of the equation
                 if '&' in temp[k]:
                     goodpart = temp[k].split('&')[0].rstrip()  # get rid of 2nd column (if table)
                     ftex_out.write(goodpart[2:-2]+'\n')
@@ -81,17 +196,25 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
                     ftex_out.write(temp[k][2:-2]+'\n') # strip the \( part?
             else:
                 ftex_out.write(temp[k])  # split lines? who knows?
-        ftex_out.write('\label{eq%i}\n' % nequ)  # label the equation for tex reference
-        ftex_out.write('\end{equation}\n')
+        ftex_out.write(r'\label{eq%i}' % nequ)  # label the equation for tex reference
+        ftex_out.write('\n')
+        ftex_out.write(r'\end{equation}')
+        ftex_out.write('\n')
         nequ += 1  # increment the equation counter
 
     elif ieq.lower() == 'f':
-        ftex_out.write('\\begin{figure*}[ht!]\n')
-        ftex_out.write('\centering\n')
-        ftex_out.write('\includegraphics[width = \\textwidth]{figure%i}\n' % nfig)
-        ftex_out.write('\caption{placeholder caption}\n')
-        ftex_out.write('\label{fig%i}\n' % nfig)
-        ftex_out.write('\end{figure*}\n')
+        ftex_out.write(r'\begin{figure*}[ht!]')
+        ftex_out.write('\n')
+        ftex_out.write(r'\centering')
+        ftex_out.write('\n')
+        ftex_out.write(r'\includegraphics[width = \textwidth]{figure%i}' % nfig)
+        ftex_out.write('\n')
+        ftex_out.write(r'\caption{placeholder caption}')
+        ftex_out.write('\n')
+        ftex_out.write(r'\label{fig%i}' % nfig)
+        ftex_out.write('\n')
+        ftex_out.write(r'\end{figure*}')
+        ftex_out.write('\n')
         print('moving this environment to junk file; sort it out manually\n')
         fjunk.write('Figure %i\n' % nfig)
         for k in temp:
@@ -100,16 +223,6 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
         nfig += 1
 
     elif ieq.lower() == 't':
-        #ftex_out.write('\\begin{table}[h]\n')
-        #ftex_out.write('\centering\n')
-        #ftex_out.write('\\begin{tabular}{lc}\hline\n')
-        #ftex_out.write('\\textbf{Data type} & \\textbf{some numbers} \\\\ \hline \n')
-        #ftex_out.write('type 1 & 1 \\\\ \n')
-        #ftex_out.write('type 2 & 2 \\\\ \hline \n')
-        #ftex_out.write('\end{tabular}\n')
-        #ftex_out.write('\caption{placeholder caption}\n')
-        #ftex_out.write('\label{tbl%i}\n' % ntab)
-        #ftex_out.write('\end{table}\n')
         new_temp = reformat_table(temp,ntab)
         for k in new_temp:
             ftex_out.write(k)
@@ -119,6 +232,10 @@ def parse_environment(line,ftex_in,ftex_out,fjunk,nequ,nfig,ntab):
             fjunk.write(k)
         fjunk.write('\n')  # saving for later
         ntab += 1
+
+    elif ieq.lower() == 'm':
+        for k in temp:
+            ftex_out.write(k)
 
     else:
         print('moving this environment to junk file; sort it out manually\n')
@@ -160,18 +277,19 @@ def reformat_table(temp,ntab):
     out_tab = pretab + tabstart
     for l in good_rows:
         out_tab += l
-    out_tab += """\end{tabular}
+    out_tab += r"""\end{tabular}
 \end{center}
 \caption{placeholder caption}
 \label{tbl%i}
-\end{table*}\n""" % ntab
+\end{table*}""" % ntab
+    out_tab += "\n"
 
     return out_tab
 
 
 def check_href_make_url(to_write):
     """
-    check a line for \href{} (and also un-wrapped URLS?) and try to fix them
+    check a line for href{} (and also un-wrapped URLS?) and try to fix them
     """
     out_write = ""
     # check for href and fix if present
@@ -298,29 +416,39 @@ def author_aliases(orcid_name,author_name):
     we are implicitly assuming that authors will not fill in orcids using initials if there
         are co-authors with identical initials
     """
-    match = False  # assume the names do not match to start with
+    ismatch = False  # assume the names do not match to start with
+
+    # pre-emptively replace all hyphens with spaces (I don't think this will be a bad thing?)
+    author_name = re.sub(r'-',' ',author_name)
+    orcid_name = re.sub(r'-',' ',orcid_name)
 
     # naive check if the two match
     if author_name == orcid_name:
-        match = True
+        ismatch = True
 
     # if they don't, check if orcid_name is abbreviated at all
     else:
         orcid_given = orcid_name.split(' ')[0]
-        orcid_last = orcid_name.split(' ')[-1]
+        orcid_last = ' '.join(orcid_name.split(' ')[1:])
         if re.match(r'[A-Z]\.',orcid_given):  # given name is abbreviated, at least
+            # check if abbreviated first name plus orcid last name matches
+            auth_given = author_name.split(' ')[0]
+            auth_last = ' '.join(author_name.split(' ')[1:])
+            auth_first_abbrev = auth_given[0] + '. ' + auth_last
+            if auth_first_abbrev == orcid_name:
+                ismatch = True  # this case should catch some van den Ende-like names
+
             # get initials from author_name and compare sans .s
             orcid_init = ''.join(c for c in orcid_name if c.isupper())
             author_bits = author_name.split(' ')
             author_init = ''.join(c[0] for c in author_bits)  # hopefully this works even for
                                     # names like McDonald etc
-                                    # NOTE might fail for van den Something
             if orcid_init == author_init:
-                match = True
-    return match
+                ismatch = True
+    return ismatch
 
 
-nonasc = {'−':'\\textendash','≤':'$\leq$','≥':'$\geq$','μ':'$\mu$','°':'$^\circ$',\
+nonasc = {'−':r'\textendash','≤':r'$\leq$','≥':r'$\geq$','μ':r'$\mu$','°':r'$^\circ$',\
             'ö':'ö','é':'é','é':'é','ć':'ć'}
 
 def check_non_ascii(line):
@@ -357,29 +485,6 @@ def check_non_ascii(line):
 
     return oline
 
-def get_abstract(ftex_in):
-    """
-    after finding second- or third-language abstract header, read and parse that abstract
-    return abstract text and dict with abstract info (language, heading)
-    """
-    abs2_dict = {}
-    abs2 = ''
-    while True:
-        line = ftex_in.readline()
-        if line.startswith('\section'):
-            hdr = line.split('{')[1].split('}')[0].split(':')[-1].lstrip()
-            abs2_dict['name'] = hdr.split('(')[0].rstrip()
-            abs2_dict['language'] = hdr.split('(')[-1].split(')')[0].lower()
-        else:
-            if not line.startswith('\hypertarget'):  # until we hit the next section
-                abs2 = abs2 + line.rstrip()
-            else:
-                break 
-        #abs2 = check_non_ascii(abs2)  # try to convert any non-ascii characters
-        abs2_dict['text'] = abs2
-
-    return ftex_in, line, abs2_dict
-
 def print_reminders(ofile_tex):
     print('An output tex file has been written at: %s' % ofile_tex)
     print('Unparsable table/figure info is in junk.tex')
@@ -393,7 +498,7 @@ def print_reminders(ofile_tex):
 
 def parse_parentheticals(line,bibkeys):
     """
-    for a line of text, parse parentheticals for citations and replace with appropriate \cite calls
+    for a line of text, parse parentheticals for citations and replace with appropriate cite calls
     """
     to_write = ''  # for appending pieces of text as they're checked
     if '(' in line:  # check for parentheticals
@@ -494,7 +599,7 @@ def _parse_paren(paren, pretext, bibkeys):
         return '('+paren+')', pretext
 
     # quick cleaning for \emph{et al.} in case someone used an unauthorized ref format
-    paren = re.sub('\\\emph{et al.}','et al.',paren)
+    paren = re.sub(r'\\emph{et al.}','et al.',paren)
 
     # split up the parenthetical by spaces -> this will have all punctuation preserved
     paren = paren.split(' ')
@@ -522,12 +627,17 @@ def _parse_paren(paren, pretext, bibkeys):
                 citations.append(test_cite + 'a')
                 pretext = ' '.join(pretext.split(' ')[:-2]) + ' '
             elif is_badref:
-                prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
-                test_cite = ''.join([prevprev,prev,paren[0][:4]])
-                is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
-                if not is_badref and not is_abamb:
-                    citations.append(test_cite + 'a')
-                    pretext = ' '.join(pretext.split(' ')[:-4]) + ' '
+                try:
+                    prevprev = pretext.split(' ')[-4]  # skip backwards over expected "and"
+                    test_cite = ''.join([prevprev,prev,paren[0][:4]])
+                    is_badref,is_abamb = _test_test_cite(test_cite,bibkeys)
+                    if not is_badref and not is_abamb:
+                        citations.append(test_cite + 'a')
+                        pretext = ' '.join(pretext.split(' ')[:-4]) + ' '
+                except:  # something is not as expected, give up and highlight for later
+                    is_badref = True
+                    is_abamb = False
+    
 
         # if we couldn't parse this thing, return something to write to mark it
         if is_badref:
@@ -553,7 +663,7 @@ def _parse_paren(paren, pretext, bibkeys):
 
         # having read through all possible years in this year-only parenthetical, 
         # compile citation and return
-        parsed = '\citet{'
+        parsed = r'\citet{'
         parsed += ', '.join(citations)  # add on citations and separators
         parsed += '}'  # remove trailing comma and space, close the bracket
 
@@ -619,7 +729,7 @@ def _parse_paren(paren, pretext, bibkeys):
                 citations.append(test_cite+'a')
 
     if len(badtext) != 0:
-        badtext = ' \\textcolor{red}{NOTE ' + badtext + '}'
+        badtext = r' \textcolor{red}{NOTE ' + badtext + '}'
     # combine citations into \citep, including preamble if there is one
     if len(citations) == 0:  # we failed to parse anything here :(
         if len(badtext) != 0 and is_abamb: 
@@ -628,9 +738,9 @@ def _parse_paren(paren, pretext, bibkeys):
             parsed = '(' + ' '.join(paren) + ')'  # put it back in parentheses and hope its ok
     else:
         if is_preamble:
-            parsed = '\citep[%s][]{' % preamble_text
+            parsed = r'\citep[%s][]{' % preamble_text
         else:
-            parsed = '\citep{'
+            parsed = r'\citep{'
         parsed += ', '.join(citations)
         parsed += '}'
 
@@ -647,10 +757,10 @@ def _test_test_cite(test_cite,bibkeys):
     is_badref = False
     is_abamb = False
 
-    if test_cite.lower() + 'a' not in bibkeys:
+    if test_cite + 'a' not in bibkeys:  # used to be test_cite.lower() for both but biblib preserves case now
         is_badref = True
     else:
-        if test_cite.lower() + 'b' in bibkeys:
+        if test_cite + 'b' in bibkeys:
             is_abamb = True
 
     return is_badref, is_abamb
@@ -670,6 +780,78 @@ def _etal_and(bits):
         and_ind = np.where(and_ind)[0][0]
         bits = np.delete(bits,and_ind)
     return bits
+
+########################################################################
+# bibtex and crossref stuff
+########################################################################
+
+def format_crossref_query(q,ret=['authors','title','doi','score','type','subtype','pdate'],i=0):
+    """ Format information (keys in ret) from a dict (q)
+    that is returned from a crossref query via habanero
+    """
+    out = {}
+    qi = q['message']['items'][i]
+    if 'title' in ret and 'title' in qi.keys():
+        out['title'] = qi['title'][0]
+    if 'doi' in ret and 'DOI' in qi.keys():
+        out['doi'] = qi['DOI']
+    if 'score' in ret and 'score' in qi.keys():
+        out['score'] = qi['score']
+    if 'type' in ret and 'type' in qi.keys():
+        out['type'] = qi['type']
+    if 'subtype' in ret and 'subtype' in qi.keys():
+        out['subtype'] = qi['subtype']
+    if 'pdate' in ret and 'published' in qi.keys():
+        if 'date-parts' in qi['published'].keys():
+            out['pdate'] = dp.parse('-'.join([str(e) for e in qi['published']['date-parts'][0]]))
+    if 'authors' in ret and 'author' in qi.keys():
+        auths = ''
+        for a in qi['author']:
+            if 'family' in a.keys() and 'given' in a.keys():
+                auths = auths + a['given'] + ' ' + a['family'] + ', '
+            elif 'name' in a.keys():
+                auths = auths + a['name'] + ', '
+        auths = auths[:-2]
+        out['auths'] = auths
+    return out
+
+def print_query_options(q0,i=0):
+    """ Take reformatted dict of query outputs and print relevant info,
+    ask for user input to decide whether the query returned a good match
+    Note: we're assuming title, authors, doi, and score will be in the output dict
+        (type not assumed)
+        this should usually be a good assumption? but could make more robust to keys
+        if it turns out to be an issue
+    """
+    print('received:\n\ttitle: %s\n\tby: %s\n\tdoi: %s\n\tscore: %.2f' % (q0['title'],\
+            q0['auths'], q0['doi'], q0['score']))
+    if 'pdate' in q0.keys():
+        print('\tyear: %i' % q0['pdate'].year)
+    if 'type' in q0.keys():
+        print('\ttype: %s' % q0['type'])
+    if 'subtype' in q0.keys():
+        print('\tsubtype: %s' % q0['subtype'])
+    if i == 0:
+        iok = input('accept this [y], reject query (n), or see next match (p): ') or 'y'
+    else:
+        iok = input('accept this [y], reject query (n), or use previous match (p): ') or 'y'
+    return iok
+
+def make_doi_url(doi,root='https://dx.doi.org/'):
+    """ Construct url for requesting bibtex based on doi
+    The only cleaning we do is to check if it ends with '. ' which I guess
+        would indicate poor scraping from a sentence termination
+    Some previous versions escaped certain characters (parens?) but that didn't
+        seem to be necessary
+    """
+    if doi.lstrip().lower().startswith('doi:'):
+        doi = doi.lstrip()[4:].lstrip()  # get rid of any doi: 10.etc syntax (old style)
+    if '. ' in doi:
+        ourl = "https://dx.doi.org/"+doi[0:doi.find('. ')]
+    else:
+        ourl = "https://dx.doi.org/"+doi
+    return ourl
+
 
 ########################################################################
 # tex escaping for python

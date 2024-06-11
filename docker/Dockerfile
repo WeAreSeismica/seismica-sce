@@ -13,6 +13,8 @@ RUN pip install pip --upgrade --no-cache --break-system-packages \
 	pip \
 	setuptools \
 	numpy \
+        habanero \
+        python-dateutil \
 	git+https://github.com/WeAreSeismica/biblib
 
 
