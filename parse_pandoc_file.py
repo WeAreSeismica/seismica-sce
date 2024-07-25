@@ -202,7 +202,7 @@ for i in range(struct[credit_key]['line']+1,struct[credit_key+1]['line']):
     line = ftex_in.readline()
     if line != '\n':
         key = line.split(':')[0]
-        vals = line.split(':')[1].lstrip().rstrip()
+        vals = line.split(':')[1].lstrip().rstrip().rstrip('.')
         credit[key] = vals
 
 # if manuscript type is included (added circa March 2024), read that before dealing with abstract
