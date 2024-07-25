@@ -369,6 +369,7 @@ while not goto_end:
             # check if the caption of this figure was on the \includegraphics line
             maybe_caption = re.findall(r'\\textbf{Figure',line)
             if len(maybe_caption) == 1: # mess with line, try to grab caption
+                line = ut.parse_parentheticals(line,bibkeys)
                 line = ut.check_for_fig_tab_eqn_refs(line)
                 line = ut.non_breaking_space(line)
 
