@@ -366,6 +366,30 @@ while not goto_end:
             fjunk.write('\n')  # saving for later
             nfig += 1
 
+            # check if the caption of this figure was on the \includegraphics line
+            maybe_caption = re.findall(r'\\textbf{Figure',line)
+            if len(maybe_caption) == 1: # mess with line, try to grab caption
+                line = ut.check_for_fig_tab_eqn_refs(line)
+                line = ut.non_breaking_space(line)
+
+                might_be_caption = '\\textbf{Figure' + line.split('\\textbf{Figure')[-1]
+                print('\t'+might_be_caption[:40])
+                iq = input('Is this a caption? [y]/n: ') or 'y'
+                if iq.lower() == 'y':  # save in caption dict, don't write here
+                    cap = r'\ref{'.join(line.split(r'\ref{')[1:]).rstrip()  # no trailing \n
+                    tag = cap.split('}')[0]
+                    #if to_write.startswith('\\textbf{Figure') or to_write.startswith('\\textbf{Table'):
+                    splits = line.split(tag)
+                    test = splits[1][2:].lstrip()
+                    if test.startswith('}'):
+                        test = test[1:].lstrip()
+                    if len(splits) > 2:
+                        fullcap = tag.join(np.append(test,splits[2:]))
+                    else:
+                        fullcap = test
+                    fullcap = fullcap.lstrip('.').strip() # strip accidental leading . and/or spaces
+                    figcap[tag] = fullcap
+
         else:
             # parse the line for parenthetical citations etc (there are some TODO s in this function)
             to_write = ut.parse_parentheticals(line,bibkeys)
