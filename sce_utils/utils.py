@@ -81,7 +81,7 @@ def first_pandoc_clean(ifile,ofile):
                 q = list(re.finditer(r'\\(?:(sub){0,3})section',line))
                 line = line[q[0].start():]  # slice to where the section tag starts
         if re.findall(r'texorpdfstring',line) and not skipline:  # has a texorpdfstring thingy, not skipped
-            line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag
+            line = re.sub(r"\\texorpdfstring{(.*?)}",r"",line)  # get rid of that tag TODO does not work always
 
         # if a (sub)section line, check for ending labels and strip them off
         if re.match(r'\\(?:(sub){0,3})section',line) and re.findall(r"\\label{(.*?)}",line):
@@ -496,15 +496,16 @@ def print_reminders(ofile_tex):
 # citations
 ########################################################################
 
-def parse_parentheticals(line,bibkeys):
+def parse_parentheticals(line,bibkeys,chars='()'):
     """
     for a line of text, parse parentheticals for citations and replace with appropriate cite calls
     """
     to_write = ''  # for appending pieces of text as they're checked
-    if '(' in line:  # check for parentheticals
+    copen = chars[0]; cclose = chars[1]
+    if copen in line:  # check for parentheticals
         # find indices of open/close parens
-        open_par = [pos for pos, char in enumerate(line) if char == '(']
-        clse_par = [pos for pos, char in enumerate(line) if char == ')']
+        open_par = [pos for pos, char in enumerate(line) if char == copen]
+        clse_par = [pos for pos, char in enumerate(line) if char == cclose]
         if len(open_par) != len(clse_par):
             # if there are excess ), check if they are for in-paragraph numbering/lists
             # make paired list of indices and types

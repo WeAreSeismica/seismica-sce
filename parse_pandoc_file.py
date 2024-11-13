@@ -28,6 +28,7 @@ parser = ArgumentParser()
 parser.add_argument('--bibfile','-b',type=str,help='path to bibfile')
 parser.add_argument('--ifile','-i',type=str,help='path to tex file from pandoc')
 parser.add_argument('--ofile','-o',type=str,help='path to output tex file')
+parser.add_argument('--parens','-p',type=str,help='() or [] for citations',default='()')
 args = parser.parse_args()
 bibtex = args.bibfile
 assert os.path.isfile(bibtex),'bibfile does not exist'
@@ -41,6 +42,7 @@ tex_premid = 'pandoc_cleaned.tex'
 tex_mid = 'temp.tex'
 junk_out = 'junk.tex'  # this is for table and figure info that can't be parsed automatically
 review = False  # switch for line numbers (and single-column format) - always off for production
+chars = args.parens
 
 ########################################################################
 # set up some things:
@@ -369,7 +371,7 @@ while not goto_end:
             # check if the caption of this figure was on the \includegraphics line
             maybe_caption = re.findall(r'\\textbf{Figure',line)
             if len(maybe_caption) == 1: # mess with line, try to grab caption
-                line = ut.parse_parentheticals(line,bibkeys)
+                line = ut.parse_parentheticals(line,bibkeys,chars=chars)
                 line = ut.check_for_fig_tab_eqn_refs(line)
                 line = ut.non_breaking_space(line)
 
@@ -393,7 +395,7 @@ while not goto_end:
 
         else:
             # parse the line for parenthetical citations etc (there are some TODO s in this function)
-            to_write = ut.parse_parentheticals(line,bibkeys)
+            to_write = ut.parse_parentheticals(line,bibkeys,chars=chars)
 
             # rescan line and look for figure/equation references to link
             to_write = ut.check_for_fig_tab_eqn_refs(to_write)
