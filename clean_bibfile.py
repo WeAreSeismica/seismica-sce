@@ -1,11 +1,13 @@
 import biblib.bib as bbl
 from argparse import ArgumentParser
 from collections import OrderedDict
-import os, re
+import numpy as np
+import os, re, sys
 
 ####
 # check a bibtex file against a tex file and clean out any unused references in the bib file
 # writes out 2 files: clean bib file (*_clean.bib) and a file with the unused entries (junk.bib or name provided)
+# before cleaning, checks for duplicate bib keys and exits if any are found
 
 # usage:
     # python3 clean_bibfile.py -b best_bibfile.bib -t copyedited_texfile.tex [-n excess_entries.bib]
@@ -29,28 +31,50 @@ if os.path.isfile(args.nahfile):
 if os.path.isfile(o_clean):
     input('%s already exists and will be overwritten [hit enter to continue]' % o_clean)
 
-# parse the bibtex file for entries
-parser = bbl.Parser()
-parsed = parser.parse(open(in_bib, 'r'))
-bib_init = parsed.get_entries()  # initial bibtex
+f = open(in_bib,'r')
+text = f.read()
+f.close()
+
+items = text.split('@')[1:]
+
+# check for duplicate keys:
+keys = [i.split('{')[1].split('\n')[0] for i in items]
+
+un,counts = np.unique(keys,return_counts=True)
+if np.any(counts > 1):
+    print('duplicated keys found:')
+    for k in un[counts>1]:
+        print(k)
+    sys.exit()
+
 bib_used = OrderedDict()    # for the entries that *should* be in the file
 bib_rogue = OrderedDict()   # for the entries that are not referenced in the tex
 
 # read the tex file as one long string
 with open(in_tex,'r') as file:
     all_tex_text = file.read()
-
 cks = ','.join(re.findall(r'cite.{(.*?)}',all_tex_text)).split(',')  # join and split for individual keys
 cks2 = ','.join(re.findall(r'cite.\[.*?\]{(.*?)}',all_tex_text)).split(',')  # for cite* with pre and/or post text
+cks3 = ','.join(re.findall(r'cite{(.*?)}',all_tex_text)).split(',')  # for cite without p or t in case authors used those
 cks.extend(cks2)
+cks.extend(cks3)
 cks = [e.lstrip().rstrip() for e in cks]
 
-for key in bib_init.keys():
-    entry = bib_init[key]
-    if key in cks:
-        bib_used[key] = entry
-    else:
-        bib_rogue[key] = entry
+# loop items in bibfile and see if the key is in the tex file
+for bibitem in items:
+    parser = bbl.Parser()
+    try:
+        q = parser.parse('@' + bibitem)
+        key = list(q.get_entries().keys())[0]
+        if key in cks:
+            bib_used[key] = q.get_entries()[key]
+        else:
+            bib_rogue[key] = q.get_entries()[key]
+    except:  # if we catch something here, it means there is a badly formed entry in the bib file
+        print(bibitem)
+        print('check your commas, brackets, parens, keys, etc')
+        sys.exit()
+
 
 # write things out
 # first write out the *unused* entries in a separate file in case we need them later
